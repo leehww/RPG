@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>에스나 대륙</title>
+<meta name="description" content="텍스트 기반 판타지 TRPG - 에스나 대륙" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#171009" />
+<style>
+  html, body { margin:0; padding:0; background:#171009; }
+  #root { min-height:100vh; }
+</style>
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect } = React;
+
+// Lightweight emoji-based icon stubs (no external icon library needed for the standalone build)
+const mkIcon = (emoji) => ({ size }) => React.createElement("span", { style: { fontSize: (size||16) + "px", lineHeight: 1, display: "inline-block" } }, emoji);
+const BookOpen = mkIcon("📖");
+const ScrollText = mkIcon("📜");
+const Backpack = mkIcon("🎒");
+const User = mkIcon("🧙");
+const RotateCcw = mkIcon("🔄");
+const X = mkIcon("✕");
+const Sword = mkIcon("⚔️");
+const Wand2 = mkIcon("🪄");
+const Crosshair = mkIcon("🎯");
+const Footprints = mkIcon("👣");
+const MessageCircle = mkIcon("💬");
+const Search = mkIcon("🔍");
+const ShieldOff = mkIcon("🛡️");
+const ChevronRight = mkIcon("›");
+const Dices = mkIcon("🎲");
+const Sparkles = mkIcon("✨");
+
+/* ============================== CONSTANTS ============================== */
+
+const STAT_LABELS = { str: "힘", dex: "민첩", con: "체력", int: "지능", wis: "지혜", cha: "매력" };
+const STAT_KEYS = ["str", "dex", "con", "int", "wis", "cha"];
+
+const RACES = {
+  1: { name: "인간", desc: "어디에도 치우치지 않는 균형 잡힌 이들", choiceBonus: true },
+  2: { name: "엘프", desc: "숲과 달빛 아래서 나고 자란 종족", mods: { str: -1, dex: 2, con: -1, int: 1, wis: 1 } },
+  3: { name: "드워프", desc: "돌과 쇠를 벗삼아 살아가는 이들", mods: { str: 1, dex: -1, con: 2, cha: -1 } },
+  4: { name: "오크", desc: "거친 황야에서 살아남은 강인한 종족", mods: { str: 2, con: 1, int: -2, wis: -1, cha: -1 } },
+  5: { name: "수인", desc: "짐승의 감각을 물려받은 이들", mods: { str: 1, dex: 1, int: -1, cha: 1 } },
+  6: { name: "하플링", desc: "작지만 재빠르고 다정한 종족", mods: { str: -2, dex: 2, con: -1, wis: 1, cha: 1 } },
+};
+
+const BG_QUESTIONS = [
+  {
+    key: "motive",
+    q: "당신이 검을 들고 떠나온 이유는?",
+    options: ["잃어버린 가족을 찾기 위해", "복수를 위해", "이름을 남기기 위해", "그저 고향이 싫어서"],
+  },
+  {
+    key: "past",
+    q: "고향을 떠나기 전, 당신은 무엇을 했나?",
+    options: ["작은 마을의 사냥꾼", "몰락한 귀족가의 자제", "떠돌이 용병", "신전에서 자란 고아"],
+  },
+  {
+    key: "values",
+    q: "당신이 가장 중요하게 여기는 것은?",
+    options: ["의리와 약속", "생존과 실리", "명예와 긍지", "자유와 즉흥"],
+  },
+];
+
+// 2~12 (2d6) 외모 테이블
+const HEIGHT_TABLE = { 2:"놀라울 만큼 왜소한 키", 3:"또래보다 눈에 띄게 작은 키", 4:"작은 편", 5:"약간 작은 편", 6:"평균보다 살짝 작은 키", 7:"평범한 키", 8:"평균보다 살짝 큰 키", 9:"큰 편", 10:"눈에 띄게 큰 키", 11:"우뚝한 장신", 12:"올려다봐야 하는 거인 같은 키" };
+const BUILD_TABLE = { 2:"뼈만 앙상한 몸", 3:"매우 마른 체형", 4:"마른 편", 5:"호리호리한 체형", 6:"평균보다 살짝 마른 체형", 7:"평범한 체형", 8:"평균보다 다부진 체형", 9:"다부진 체형", 10:"근육질의 몸", 11:"거대한 근육질의 몸", 12:"보는 이를 압도하는 육중한 체구" };
+const FEATURE_TABLE = { 2:"한쪽 눈이 다른 색인 오드아이", 3:"얼굴을 가로지르는 오래된 흉터", 4:"유난히 낮고 허스키한 목소리", 5:"한쪽 팔에 새겨진 낡은 문신", 6:"살짝 그을린 피부", 7:"특별한 특징 없는 수수한 인상", 8:"유난히 맑고 또렷한 눈동자", 9:"희끗희끗 새치가 섞인 머리카락", 10:"목덜미의 화상 자국", 11:"한쪽 귀 끝이 짐승처럼 뾰족함", 12:"보는 사람이 저도 모르게 시선을 뺏기는 인상" };
+
+const JOBS = {
+  warrior: { name: "전사", atkStat: "str", weaponDmg: 6, skills: [
+    { tier:1, name:"강타", mp:3, dmgMult:1.4, desc:"묵직한 일격을 내리친다" },
+    { tier:2, name:"방패 밀치기", mp:5, dmgMult:1.2, desc:"상대의 균형을 무너뜨린다" },
+    { tier:3, name:"연속 베기", mp:8, dmgMult:1.6, desc:"두 번의 칼질을 몰아친다" },
+    { tier:4, name:"투신의 함성", mp:12, dmgMult:1.9, desc:"전장을 뒤흔드는 함성" },
+    { tier:5, name:"파쇄격", mp:18, dmgMult:2.4, desc:"모든 것을 부수는 최후의 일격" },
+  ]},
+  archer: { name: "궁수", atkStat: "dex", weaponDmg: 5, skills: [
+    { tier:1, name:"조준 사격", mp:3, dmgMult:1.4, desc:"급소를 노린 화살" },
+    { tier:2, name:"연사", mp:5, dmgMult:1.3, desc:"빠르게 두 발을 쏜다" },
+    { tier:3, name:"관통 화살", mp:8, dmgMult:1.7, desc:"방어를 꿰뚫는 화살" },
+    { tier:4, name:"불화살 세례", mp:12, dmgMult:1.9, desc:"불타는 화살을 퍼붓는다" },
+    { tier:5, name:"천공의 화살", mp:18, dmgMult:2.5, desc:"하늘을 가르는 필살의 일격" },
+  ]},
+  mage: { name: "마법사", atkStat: "int", weaponDmg: 4, skills: [
+    { tier:1, name:"화염구", mp:4, dmgMult:1.5, desc:"작은 불덩이를 날린다" },
+    { tier:2, name:"얼음창", mp:6, dmgMult:1.6, desc:"날카로운 얼음창을 던진다" },
+    { tier:3, name:"번개 사슬", mp:9, dmgMult:1.8, desc:"전류가 튀며 퍼진다" },
+    { tier:4, name:"운석 낙하", mp:13, dmgMult:2.1, desc:"하늘에서 불덩이가 떨어진다" },
+    { tier:5, name:"멸계의 마법진", mp:20, dmgMult:2.6, desc:"금기에 가까운 파괴 마법" },
+  ]},
+  rogue: { name: "도적", atkStat: "dex", weaponDmg: 5, skills: [
+    { tier:1, name:"기습", mp:3, dmgMult:1.5, desc:"허점을 노려 찌른다" },
+    { tier:2, name:"독날", mp:5, dmgMult:1.3, desc:"독을 바른 칼날" },
+    { tier:3, name:"그림자 밟기", mp:8, dmgMult:1.7, desc:"그림자를 타고 접근해 벤다" },
+    { tier:4, name:"연쇄 자상", mp:12, dmgMult:2.0, desc:"보이지 않는 속도로 난자한다" },
+    { tier:5, name:"천참격", mp:18, dmgMult:2.5, desc:"급소만을 노리는 필살의 연격" },
+  ]},
+};
+
+const MONSTERS = [
+  { id:"m1", name:"녹슨 늑대", tier:1, hp:18, dex:8, str:6, dmg:3, xp:20, discovered:true, desc:"재의 폐허지대를 떠도는 굶주린 늑대", loot:[{id:"i_fang",name:"늑대 이빨",chance:0.5},{id:"i_gold",name:"소량의 금화",chance:0.6}] },
+  { id:"m2", name:"들개 무리의 우두머리", tier:1, hp:24, dex:10, str:9, dmg:4, xp:28, discovered:false, desc:"무리를 이끄는 사나운 들개", loot:[{id:"i_hide",name:"질긴 가죽",chance:0.5}] },
+  { id:"m3", name:"재의 형제단 척후병", tier:2, hp:32, dex:12, str:10, dmg:6, xp:45, discovered:false, desc:"재의 형제단에서 파견한 정찰병", loot:[{id:"i_dagger",name:"낡은 단검",chance:0.35},{id:"i_gold",name:"소량의 금화",chance:0.7}] },
+  { id:"m4", name:"고대 아스텔의 파수병", tier:3, hp:48, dex:9, str:14, dmg:9, xp:70, discovered:false, desc:"고대 아스텔 문명이 남긴 석조 골렘", loot:[{id:"i_core",name:"아스텔의 파편",chance:0.4}] },
+  { id:"m5", name:"살린 항의 밀수꾼", tier:2, hp:28, dex:13, str:8, dmg:5, xp:40, discovered:false, desc:"항구에서 암약하는 무장 밀수꾼", loot:[{id:"i_gold",name:"소량의 금화",chance:0.8}] },
+  { id:"m6", name:"아르덴의 배신 기사", tier:3, hp:52, dex:11, str:13, dmg:8, xp:75, discovered:false, desc:"왕국을 등진 타락한 기사", loot:[{id:"i_sword",name:"낡은 장검",chance:0.3}] },
+];
+
+/* ============================== HELPERS ============================== */
+
+const rollD = (sides) => Math.floor(Math.random() * sides) + 1;
+const rollDice = (count, sides) => Array.from({ length: count }, () => rollD(sides)).reduce((a,b)=>a+b,0);
+const statMod = (stat) => Math.floor(stat / 2) - 3;
+const uid = () => Math.random().toString(36).slice(2, 10);
+const xpForLevel = (lvl) => lvl * 100;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function performCheck(mod, dc, label) {
+  const nat = rollD(20);
+  const total = nat + mod;
+  const critSuccess = nat === 20;
+  const critFail = nat === 1;
+  const success = critSuccess || (!critFail && total >= dc);
+  return { nat, mod, total, dc, success, critSuccess, critFail, label };
+}
+
+/* ============================== SMALL UI ============================== */
+
+function Bar({ value, max, colorClass, label }) {
+  const pct = clamp((value / max) * 100, 0, 100);
+  return (
+    <div className="w-full">
+      <div className="flex justify-between text-[10px] mb-0.5" style={{ color: "#c9bfa8" }}>
+        <span>{label}</span><span>{value}/{max}</span>
+      </div>
+      <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: "#2a2117" }}>
+        <div className={colorClass} style={{ width: `${pct}%`, height: "100%", transition: "width .35s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+function DiceCard({ roll }) {
+  const outcomeText = roll.critSuccess ? "대성공" : roll.critFail ? "대실패" : roll.success ? "성공" : "실패";
+  const tone = roll.critSuccess ? "crit-success" : roll.critFail ? "crit-fail" : roll.success ? "success" : "fail";
+  return (
+    <div className={`dice-card dice-card--${tone}`}>
+      <div className="dice-card__icon"><Dices size={18} /></div>
+      <div className="dice-card__body">
+        <div className="dice-card__label">{roll.label}</div>
+        <div className="dice-card__math">
+          🎲 {roll.nat} {roll.mod >= 0 ? "+" : "-"} {Math.abs(roll.mod)} = <b>{roll.total}</b> vs DC {roll.dc}
+        </div>
+      </div>
+      <div className="dice-card__outcome">{outcomeText}</div>
+    </div>
+  );
+}
+
+function LogEntry({ entry }) {
+  if (entry.type === "dice") return <DiceCard roll={entry.roll} />;
+  if (entry.type === "player") return <div className="log-player">{entry.text}</div>;
+  if (entry.type === "system") return <div className="log-system">{entry.text}</div>;
+  return <div className="log-narrative">{entry.text}</div>;
+}
+
+/* ============================== CHARACTER CREATION ============================== */
+
+function CreationFlow({ onComplete }) {
+  const [step, setStep] = useState(0);
+  const [draft, setDraft] = useState({
+    name: "", age: "", gender: "", raceRoll: null, bg: {},
+    stats: null, appearance: null, bonusChoice: null,
+  });
+
+  const steps = ["name","age","gender","race","background","stats","appearance","summary"];
+  const cur = steps[step];
+  const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
+  const prev = () => setStep((s) => Math.max(s - 1, 0));
+
+  const rollRace = () => {
+    const r = rollD(6);
+    setDraft((d) => ({ ...d, raceRoll: r, bonusChoice: null }));
+  };
+
+  const rollStats = () => {
+    const base = {};
+    STAT_KEYS.forEach((k) => { base[k] = rollDice(3, 6); });
+    const race = RACES[draft.raceRoll];
+    const final = { ...base };
+    if (race.mods) STAT_KEYS.forEach((k) => { final[k] = clamp((final[k] || 0) + (race.mods[k] || 0), 1, 20); });
+    if (race.choiceBonus && draft.bonusChoice) final[draft.bonusChoice] += 1;
+    setDraft((d) => ({ ...d, stats: final }));
+  };
+
+  const rollAppearance = () => {
+    setDraft((d) => ({
+      ...d,
+      appearance: { height: rollDice(2,6), build: rollDice(2,6), feature: rollDice(2,6) },
+    }));
+  };
+
+  const canProceed = () => {
+    if (cur === "name") return draft.name.trim().length > 0;
+    if (cur === "age") return String(draft.age).trim().length > 0 && !isNaN(Number(draft.age));
+    if (cur === "gender") return !!draft.gender;
+    if (cur === "race") return draft.raceRoll && (!RACES[draft.raceRoll].choiceBonus || draft.bonusChoice);
+    if (cur === "background") return BG_QUESTIONS.every((q) => draft.bg[q.key] && draft.bg[q.key].trim());
+    if (cur === "stats") return !!draft.stats;
+    if (cur === "appearance") return !!draft.appearance;
+    return true;
+  };
+
+  return (
+    <div className="creation-screen">
+      <div className="creation-eyebrow">에스나 대륙 · 모험자 기록서 {step+1}/{steps.length}</div>
+
+      {cur === "name" && (
+        <StepCard title="당신의 이름은?">
+          <input className="text-input" placeholder="이름을 입력하세요" value={draft.name}
+            onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+        </StepCard>
+      )}
+
+      {cur === "age" && (
+        <StepCard title="나이는 몇입니까?">
+          <input className="text-input" type="number" placeholder="나이" value={draft.age}
+            onChange={(e) => setDraft({ ...draft, age: e.target.value })} />
+        </StepCard>
+      )}
+
+      {cur === "gender" && (
+        <StepCard title="성별을 선택하세요">
+          <div className="choice-grid">
+            {["남성","여성","기타"].map((g) => (
+              <button key={g} className={`choice-btn ${draft.gender===g?"choice-btn--active":""}`}
+                onClick={() => setDraft({ ...draft, gender: g })}>{g}</button>
+            ))}
+          </div>
+        </StepCard>
+      )}
+
+      {cur === "race" && (
+        <StepCard title="운명의 굴림 — 종족 (d6)">
+          {!draft.raceRoll ? (
+            <button className="primary-btn" onClick={rollRace}><Dices size={16}/> d6 굴리기</button>
+          ) : (
+            <>
+              <DiceCard roll={{ nat: draft.raceRoll, mod: 0, total: draft.raceRoll, dc: 0, success: true, label: "종족 굴림" }} />
+              <div className="race-result">
+                <div className="race-result__name">{RACES[draft.raceRoll].name}</div>
+                <div className="race-result__desc">{RACES[draft.raceRoll].desc}</div>
+                {RACES[draft.raceRoll].mods && (
+                  <div className="race-result__mods">
+                    {Object.entries(RACES[draft.raceRoll].mods).map(([k,v]) => (
+                      <span key={k} className="mod-chip">{STAT_LABELS[k]} {v>0?`+${v}`:v}</span>
+                    ))}
+                  </div>
+                )}
+                {RACES[draft.raceRoll].choiceBonus && (
+                  <div className="choice-grid choice-grid--wrap">
+                    {STAT_KEYS.map((k) => (
+                      <button key={k} className={`choice-btn choice-btn--sm ${draft.bonusChoice===k?"choice-btn--active":""}`}
+                        onClick={() => setDraft({ ...draft, bonusChoice: k })}>{STAT_LABELS[k]} +1</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </StepCard>
+      )}
+
+      {cur === "background" && (
+        <StepCard title="지난 삶에 대하여">
+          {BG_QUESTIONS.map((q) => (
+            <div key={q.key} className="bg-question">
+              <div className="bg-question__text">{q.q}</div>
+              <div className="choice-grid choice-grid--col">
+                {q.options.map((opt) => (
+                  <button key={opt} className={`choice-btn ${draft.bg[q.key]===opt?"choice-btn--active":""}`}
+                    onClick={() => setDraft({ ...draft, bg: { ...draft.bg, [q.key]: opt } })}>{opt}</button>
+                ))}
+                <input className="text-input text-input--sm" placeholder="직접 입력..."
+                  value={draft.bg[`${q.key}_custom`] || ""}
+                  onChange={(e) => setDraft({ ...draft, bg: { ...draft.bg, [q.key]: e.target.value, [`${q.key}_custom`]: e.target.value } })} />
+              </div>
+            </div>
+          ))}
+        </StepCard>
+      )}
+
+      {cur === "stats" && (
+        <StepCard title="능력치 굴림 (3d6 × 6)">
+          {!draft.stats ? (
+            <button className="primary-btn" onClick={rollStats}><Dices size={16}/> 능력치 굴리기</button>
+          ) : (
+            <div className="stat-grid">
+              {STAT_KEYS.map((k) => (
+                <div key={k} className="stat-cell">
+                  <div className="stat-cell__label">{STAT_LABELS[k]}</div>
+                  <div className="stat-cell__value">{draft.stats[k]}</div>
+                  <div className="stat-cell__mod">{statMod(draft.stats[k]) >= 0 ? "+" : ""}{statMod(draft.stats[k])}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </StepCard>
+      )}
+
+      {cur === "appearance" && (
+        <StepCard title="외모 굴림 (2d6 × 3)">
+          {!draft.appearance ? (
+            <button className="primary-btn" onClick={rollAppearance}><Dices size={16}/> 외모 굴리기</button>
+          ) : (
+            <div className="appearance-list">
+              <div className="appearance-row"><b>신장</b> ({draft.appearance.height}) — {HEIGHT_TABLE[draft.appearance.height]}</div>
+              <div className="appearance-row"><b>체형</b> ({draft.appearance.build}) — {BUILD_TABLE[draft.appearance.build]}</div>
+              <div className="appearance-row"><b>특징</b> ({draft.appearance.feature}) — {FEATURE_TABLE[draft.appearance.feature]}</div>
+            </div>
+          )}
+        </StepCard>
+      )}
+
+      {cur === "summary" && (
+        <StepCard title="모험을 시작하기 전에">
+          <div className="summary-card">
+            <div className="summary-line"><b>{draft.name}</b> · {draft.age}세 · {draft.gender} · {RACES[draft.raceRoll].name}</div>
+            <div className="summary-line summary-line--muted">{draft.bg.motive} · {draft.bg.past} · {draft.bg.values}</div>
+            <div className="stat-grid stat-grid--summary">
+              {STAT_KEYS.map((k) => (
+                <div key={k} className="stat-cell stat-cell--sm">
+                  <div className="stat-cell__label">{STAT_LABELS[k]}</div>
+                  <div className="stat-cell__value">{draft.stats[k]}</div>
+                </div>
+              ))}
+            </div>
+            <div className="summary-line">{HEIGHT_TABLE[draft.appearance.height]}, {BUILD_TABLE[draft.appearance.build]}. {FEATURE_TABLE[draft.appearance.feature]}.</div>
+          </div>
+        </StepCard>
+      )}
+
+      <div className="creation-nav">
+        {step > 0 && <button className="secondary-btn" onClick={prev}>이전</button>}
+        {cur !== "summary" ? (
+          <button className="primary-btn" disabled={!canProceed()} onClick={next}>다음 <ChevronRight size={16}/></button>
+        ) : (
+          <button className="primary-btn" onClick={() => onComplete(draft)}>모험 시작 <Sparkles size={16}/></button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StepCard({ title, children }) {
+  return (
+    <div className="step-card">
+      <h2 className="step-card__title">{title}</h2>
+      <div className="step-card__body">{children}</div>
+    </div>
+  );
+}
+
+/* ============================== GAME SCREEN ============================== */
+
+function buildCharacter(draft) {
+  const con = draft.stats.con;
+  return {
+    name: draft.name, age: draft.age, gender: draft.gender,
+    race: RACES[draft.raceRoll].name,
+    background: draft.bg,
+    stats: draft.stats,
+    appearance: draft.appearance,
+    level: 1, xp: 0, statPoints: 0,
+    maxHp: 20 + con, hp: 20 + con,
+    maxMp: 10 + draft.stats.int, mp: 10 + draft.stats.int,
+    gold: 15,
+    job: null,
+    unlockedSkillTier: 0,
+    inventory: [
+      { id:"i_potion", name:"체력 물약", qty:2 },
+      { id:"i_gold", name:"소량의 금화", qty:15 },
+    ],
+    quests: [
+      { id:"q1", title:"재의 폐허지대로", status:"active",
+        objectives: [ { text:"살린 항을 벗어난다", done:true }, { text:"재의 폐허지대 어귀에 도착한다", done:false } ] },
+    ],
+    bestiary: MONSTERS.map((m) => ({ ...m })),
+    npcAffinity: { "항구의 상인 데린": 0 },
+    usedTopics: [],
+    alert: 0,
+    chapterStage: 0,
+  };
+}
+
+const STORY_NODES = [
+  {
+    id: "start",
+    text: (c) => `살린 항의 짠내 나는 안개 속에서, ${c.name}은(는) 재의 폐허지대로 향하는 좁은 길 앞에 선다. 낡은 이정표가 바람에 삐걱거리고, 저 멀리 아르덴성의 첨탑이 흐릿하게 보인다.`,
+    suggestions: [
+      { label: "🔎 주변을 살펴본다", action: "trap" },
+      { label: "🤫 조용히 폐허 안쪽으로 접근한다", action: "stealth" },
+      { label: "🗣️ 길목의 상인에게 말을 건다", action: "persuade" },
+    ],
+  },
+  {
+    id: "ruins",
+    text: () => `무너진 석조 건물 사이로 들어서자, 재가 섞인 바람이 얼굴을 스친다. 어딘가에서 낮게 으르렁대는 소리가 들려온다.`,
+    suggestions: [
+      { label: "⚔️ 소리가 나는 쪽으로 다가간다 (전투)", action: "combat" },
+      { label: "🤫 소리를 피해 우회한다", action: "stealth" },
+      { label: "➡️ 더 깊이 들어간다", action: "advance" },
+    ],
+  },
+  {
+    id: "campfire",
+    text: (c) => `전투의 흔적을 지나 도착한 야영지에서, 재의 형제단의 문양이 새겨진 낡은 서신을 발견한다. 곁에는 부상당한 척후병이 쓰러져 있다.`,
+    suggestions: [
+      { label: "🗣️ 척후병을 회유해 정보를 얻는다", action: "persuade" },
+      { label: "🎁 직업의 길을 깨닫는다", action: "unlockjob" },
+      { label: "➡️ 계속 나아간다", action: "advance" },
+    ],
+  },
+];
+
+function App() {
+  const [screen, setScreen] = useState("creation");
+  const [character, setCharacter] = useState(null);
+  const [log, setLog] = useState([]);
+  const [panel, setPanel] = useState(null); // 'bestiary'|'quest'|'inventory'|'status'|null
+  const [combat, setCombat] = useState(null);
+  const [nodeIdx, setNodeIdx] = useState(0);
+  const [input, setInput] = useState("");
+  const [pendingPersuade, setPendingPersuade] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [jobPick, setJobPick] = useState(false);
+  const logEndRef = useRef(null);
+
+  useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [log]);
+
+  const pushLog = (entry) => setLog((l) => [...l, { id: uid(), ...entry }]);
+  const pushNarrative = (text) => pushLog({ type: "narrative", text });
+  const pushSystem = (text) => pushLog({ type: "system", text });
+  const pushDice = (roll) => pushLog({ type: "dice", roll });
+
+  const onCreationComplete = (draft) => {
+    const c = buildCharacter(draft);
+    setCharacter(c);
+    setScreen("game");
+    pushNarrative(STORY_NODES[0].text(c));
+  };
+
+  const updateChar = (fn) => setCharacter((c) => { const nc = { ...c }; fn(nc); return nc; });
+
+  const gainItem = (name, id, qty=1) => {
+    updateChar((c) => {
+      const existing = c.inventory.find((i) => i.id === id);
+      if (existing) existing.qty += qty;
+      else if (c.inventory.length < 10) c.inventory.push({ id, name, qty });
+      else pushSystem(`가방이 가득 차 ${name}을(를) 챙기지 못했다.`);
+    });
+  };
+
+  const handleLevelUpCheck = () => {
+    updateChar((c) => {
+      const need = xpForLevel(c.level);
+      if (c.xp >= need) {
+        c.level += 1; c.xp -= need; c.statPoints += 2;
+        c.maxHp += 5; c.maxMp += 3; c.hp = c.maxHp; c.mp = c.maxMp;
+        pushSystem(`레벨 업! Lv.${c.level}이 되었다. 분배 가능한 능력치 포인트 +2 (상태 창에서 분배하세요)`);
+      }
+    });
+  };
+
+  /* ---------- Exploration checks ---------- */
+
+  const doStealthCheck = () => {
+    const dc = character.alert >= 2 ? 16 : 12;
+    const roll = performCheck(statMod(character.stats.dex), dc, "은신 판정");
+    pushDice(roll);
+    if (roll.success) {
+      pushNarrative("그림자 속으로 미끄러지듯 몸을 숨긴다. 아무도 눈치채지 못한 듯하다.");
+      updateChar((c) => { c.alert = Math.max(0, c.alert - 1); });
+      advanceNode();
+    } else {
+      updateChar((c) => { c.alert = Math.min(3, c.alert + 1); });
+      if (character.alert + 1 >= 3) {
+        pushNarrative("작은 돌부리에 걸려 소리를 내고 만다. 그림자 속 눈동자가 이쪽을 향한다 — 발각되었다!");
+        startCombat();
+      } else {
+        pushNarrative(`은신에 실패했지만 다행히 들키진 않은 듯하다. (경계 ${character.alert + 1}/3)`);
+        advanceNode();
+      }
+    }
+  };
+
+  const doTrapCheck = () => {
+    const dc = 14;
+    const roll = performCheck(statMod(character.stats.wis), dc, "함정 감지 (지혜)");
+    pushDice(roll);
+    if (roll.success) {
+      pushNarrative("발밑에서 희미한 실선을 발견한다 — 누군가 설치한 견제용 장치다.");
+      pushSystem("해제를 시도하거나, 우회할 수 있습니다.");
+      pushLog({ type: "choice", options: [
+        { label: "🔧 해제 시도 (민첩)", action: "disarm" },
+        { label: "↩️ 우회한다", action: "advance" },
+      ]});
+    } else {
+      const dmg = rollD(6) + 2;
+      pushNarrative("무심코 내디딘 발이 장치를 건드린다. 날카로운 통증이 스친다!");
+      updateChar((c) => { c.hp = Math.max(0, c.hp - dmg); });
+      pushSystem(`피해 ${dmg}을(를) 입었다.`);
+      advanceNode();
+    }
+  };
+
+  const doDisarm = () => {
+    const roll = performCheck(statMod(character.stats.dex), 14, "함정 해제 (민첩)");
+    pushDice(roll);
+    if (roll.success) { pushNarrative("섬세한 손놀림으로 장치를 무력화한다."); gainItem("녹슨 부품", "i_scrap", 1); }
+    else { const dmg = rollD(4); updateChar((c)=>{c.hp=Math.max(0,c.hp-dmg);}); pushNarrative("장치가 오작동하며 튕겨 나온다."); pushSystem(`피해 ${dmg}.`); }
+    advanceNode();
+  };
+
+  const doPersuade = () => {
+    const npc = "항구의 상인 데린";
+    if (character.usedTopics.includes(npc)) {
+      pushSystem("이미 같은 주제로 이야기를 나눴다. 더 할 말이 없어 보인다.");
+      return;
+    }
+    const affinity = character.npcAffinity[npc] || 0;
+    const dc = clamp(16 - Math.floor(affinity / 20), 8, 20);
+    const roll = performCheck(statMod(character.stats.cha), dc, `설득 판정 (호감도 ${affinity})`);
+    pushDice(roll);
+    updateChar((c) => {
+      c.usedTopics = [...c.usedTopics, npc];
+      c.npcAffinity[npc] = clamp(affinity + (roll.success ? 15 : -5), -100, 100);
+    });
+    if (roll.success) { pushNarrative("상대의 눈빛이 누그러진다. 유용한 정보와 함께 작은 호의를 얻는다."); gainItem("정보 쪽지", "i_note", 1); }
+    else { pushNarrative("말이 통하지 않는다. 상대는 팔짱을 낀 채 등을 돌린다."); }
+    advanceNode();
+  };
+
+  const advanceNode = () => setTimeout(() => {
+    setNodeIdx((i) => {
+      const next = Math.min(i + 1, STORY_NODES.length - 1);
+      if (STORY_NODES[next]) pushNarrative(STORY_NODES[next].text(character));
+      return next;
+    });
+  }, 300);
+
+  /* ---------- Combat ---------- */
+
+  const startCombat = () => {
+    const pool = character.bestiary.filter((m) => m.tier <= Math.ceil(character.level));
+    const enemy = { ...pool[Math.floor(Math.random() * pool.length)] };
+    enemy.curHp = enemy.hp;
+    updateChar((c) => { c.bestiary = c.bestiary.map((m) => m.id === enemy.id ? { ...m, discovered: true } : m); });
+    setCombat({ enemy, log: [] });
+    pushSystem(`⚔️ ${enemy.name}과(와) 전투가 시작된다!`);
+  };
+
+  const combatAttack = (skill=null) => {
+    if (!combat) return;
+    const job = character.job ? JOBS[character.job] : null;
+    const atkStat = job ? job.atkStat : "str";
+    const mod = statMod(character.stats[atkStat]);
+    const hitDC = 10 + Math.floor(combat.enemy.dex / 2);
+    const roll = performCheck(mod, hitDC, skill ? `${skill.name} 명중 판정` : "공격 명중 판정");
+    pushDice(roll);
+
+    let mult = 0;
+    if (roll.critSuccess) mult = 1.75;
+    else if (roll.success && roll.total - hitDC >= 5) mult = 1.15;
+    else if (roll.success) mult = 1.0;
+
+    if (skill) mult *= skill.dmgMult;
+    const baseDmg = (job ? job.weaponDmg : 3) + Math.max(0, mod);
+    const dmg = mult > 0 ? Math.max(1, Math.floor(baseDmg * mult)) : 0;
+
+    if (dmg > 0) {
+      pushNarrative(`${skill ? skill.name + "을(를) 사용해 " : ""}일격을 가한다! ${dmg}의 피해를 입혔다.`);
+      setCombat((cb) => ({ ...cb, enemy: { ...cb.enemy, curHp: Math.max(0, cb.enemy.curHp - dmg) } }));
+    } else {
+      pushNarrative("공격이 빗나간다.");
+    }
+    if (skill) updateChar((c) => { c.mp = Math.max(0, c.mp - skill.mp); });
+
+    setTimeout(() => enemyTurn(dmg), 350);
+  };
+
+  const enemyTurn = (playerDmgDealt) => {
+    setCombat((cb) => {
+      if (!cb) return cb;
+      const enemyHpAfter = cb.enemy.curHp;
+      if (enemyHpAfter <= 0) { finishCombatWin(cb.enemy); return null; }
+      const enemyMod = Math.floor(cb.enemy.str / 3);
+      const defDC = 10 + statMod(character.stats.dex) + 3;
+      const roll = performCheck(enemyMod, defDC, `${cb.enemy.name}의 공격`);
+      pushDice(roll);
+      let dmg = 0;
+      if (roll.critSuccess) dmg = Math.floor(cb.enemy.dmg * 1.5);
+      else if (roll.success) dmg = cb.enemy.dmg;
+      if (dmg > 0) {
+        pushNarrative(`${cb.enemy.name}이(가) 반격해 ${dmg}의 피해를 입힌다!`);
+        updateChar((c) => { c.hp = Math.max(0, c.hp - dmg); });
+      } else {
+        pushNarrative(`${cb.enemy.name}의 공격이 빗나간다.`);
+      }
+      return cb;
+    });
+  };
+
+  const finishCombatWin = (enemy) => {
+    pushSystem(`🏆 ${enemy.name}을(를) 쓰러뜨렸다! 경험치 +${enemy.xp}`);
+    updateChar((c) => { c.xp += enemy.xp; });
+    enemy.loot.forEach((l) => { if (Math.random() < l.chance) { pushSystem(`획득: ${l.name}`); gainItem(l.name, l.id, 1); } });
+    setTimeout(handleLevelUpCheck, 50);
+    advanceNode();
+  };
+
+  const combatFlee = () => {
+    if (!combat) return;
+    const roll = performCheck(statMod(character.stats.dex), 10 + Math.floor(combat.enemy.dex/2), "도주 판정");
+    pushDice(roll);
+    if (roll.success) { pushNarrative("재빠르게 몸을 빼내 거리를 벌린다."); setCombat(null); }
+    else { pushNarrative("도망치지 못했다!"); setTimeout(() => enemyTurn(0), 300); }
+  };
+
+  /* ---------- Job unlock ---------- */
+
+  const unlockJob = (jobKey) => {
+    updateChar((c) => { c.job = jobKey; c.unlockedSkillTier = 1; });
+    pushSystem(`${JOBS[jobKey].name}의 길을 걷기로 결심했다. 1티어 스킬 「${JOBS[jobKey].skills[0].name}」을(를) 익혔다.`);
+    setJobPick(false);
+    advanceNode();
+  };
+
+  /* ---------- Free text ---------- */
+
+  const handleFreeText = () => {
+    const t = input.trim();
+    if (!t) return;
+    pushLog({ type: "player", text: t });
+    setInput("");
+    if (/공격|싸우|전투/.test(t)) startCombat();
+    else if (/숨|은신|잠입/.test(t)) doStealthCheck();
+    else if (/설득|대화|말/.test(t)) doPersuade();
+    else if (/조사|살펴|확인/.test(t)) doTrapCheck();
+    else pushNarrative("주변을 둘러보지만 특별한 반응은 없다. 다른 행동을 시도해볼 수 있을 것 같다.");
+  };
+
+  const onSuggestion = (action) => {
+    if (action === "stealth") doStealthCheck();
+    else if (action === "trap") doTrapCheck();
+    else if (action === "disarm") doDisarm();
+    else if (action === "persuade") doPersuade();
+    else if (action === "combat") startCombat();
+    else if (action === "advance") advanceNode();
+    else if (action === "unlockjob") setJobPick(true);
+  };
+
+  const resetGame = () => {
+    setScreen("creation"); setCharacter(null); setLog([]); setCombat(null);
+    setNodeIdx(0); setPanel(null); setResetConfirm(false); setJobPick(false);
+  };
+
+  if (screen === "creation") {
+    return (<div className="esna-root"><GlobalStyle /><CreationFlow onComplete={onCreationComplete} /></div>);
+  }
+
+  const node = STORY_NODES[nodeIdx];
+
+  return (
+    <div className="esna-root">
+      <GlobalStyle />
+      <div className="game-header">
+        <div className="game-header__title">에스나 대륙</div>
+        <Bar value={character.hp} max={character.maxHp} colorClass="bar-fill bar-fill--hp" label="HP" />
+        <Bar value={character.mp} max={character.maxMp} colorClass="bar-fill bar-fill--mp" label="MP" />
+      </div>
+
+      <div className="log-scroll">
+        {log.map((entry) => <LogEntry key={entry.id} entry={entry} />)}
+        {log.length > 0 && log[log.length-1].type === "choice" && (
+          <div className="suggestion-row">
+            {log[log.length-1].options.map((o) => (
+              <button key={o.label} className="suggestion-btn" onClick={() => onSuggestion(o.action)}>{o.label}</button>
+            ))}
+          </div>
+        )}
+        <div ref={logEndRef} />
+      </div>
+
+      {combat && (
+        <CombatPanel combat={combat} character={character} onAttack={combatAttack} onFlee={combatFlee} />
+      )}
+
+      {!combat && jobPick && (
+        <div className="job-pick">
+          <div className="job-pick__title">직업의 길을 선택하세요</div>
+          <div className="choice-grid">
+            {Object.entries(JOBS).map(([key, job]) => (
+              <button key={key} className="choice-btn" onClick={() => unlockJob(key)}>{job.name}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!combat && !jobPick && node && (
+        <div className="suggestion-row suggestion-row--floating">
+          {node.suggestions.map((s) => (
+            <button key={s.label} className="suggestion-btn" onClick={() => onSuggestion(s.action)}>{s.label}</button>
+          ))}
+        </div>
+      )}
+
+      {!combat && (
+        <div className="input-row">
+          <input className="text-input" placeholder="행동을 입력하세요..." value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleFreeText()} />
+          <button className="send-btn" onClick={handleFreeText}><MessageCircle size={16}/></button>
+        </div>
+      )}
+
+      <div className="bottom-nav">
+        <button className="nav-btn" onClick={() => setResetConfirm(true)}><RotateCcw size={18}/><span>초기화</span></button>
+        <button className="nav-btn" onClick={() => setPanel("status")}><User size={18}/><span>상태</span></button>
+        <button className="nav-btn" onClick={() => setPanel("inventory")}><Backpack size={18}/><span>가방</span></button>
+        <button className="nav-btn" onClick={() => setPanel("quest")}><ScrollText size={18}/><span>퀘스트</span></button>
+        <button className="nav-btn" onClick={() => setPanel("bestiary")}><BookOpen size={18}/><span>도감</span></button>
+      </div>
+
+      {panel && (
+        <Modal onClose={() => setPanel(null)}>
+          {panel === "status" && <StatusPanel character={character} updateChar={updateChar} />}
+          {panel === "inventory" && <InventoryPanel character={character} updateChar={updateChar} />}
+          {panel === "quest" && <QuestPanel character={character} />}
+          {panel === "bestiary" && <BestiaryPanel character={character} />}
+        </Modal>
+      )}
+
+      {resetConfirm && (
+        <Modal onClose={() => setResetConfirm(false)}>
+          <div className="confirm-box">
+            <div className="confirm-box__title">정말 초기화하시겠습니까?</div>
+            <div className="confirm-box__desc">모든 진행 상황이 사라지며 되돌릴 수 없습니다.</div>
+            <div className="confirm-box__actions">
+              <button className="secondary-btn" onClick={() => setResetConfirm(false)}>취소</button>
+              <button className="danger-btn" onClick={resetGame}>초기화</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ============================== COMBAT PANEL ============================== */
+
+function CombatPanel({ combat, character, onAttack, onFlee }) {
+  const job = character.job ? JOBS[character.job] : null;
+  const availableSkills = job ? job.skills.filter((s) => s.tier <= character.unlockedSkillTier && s.mp <= character.mp) : [];
+  return (
+    <div className="combat-panel">
+      <div className="combat-panel__enemy">
+        <div className="combat-panel__enemy-name">{combat.enemy.name}</div>
+        <Bar value={combat.enemy.curHp} max={combat.enemy.hp} colorClass="bar-fill bar-fill--enemy" label="적 HP" />
+      </div>
+      <div className="combat-panel__actions">
+        <button className="combat-btn combat-btn--atk" onClick={() => onAttack(null)}><Sword size={16}/> 공격</button>
+        {availableSkills.map((s) => (
+          <button key={s.name} className="combat-btn combat-btn--skill" onClick={() => onAttack(s)}>
+            <Wand2 size={14}/> {s.name} <span className="mp-cost">MP{s.mp}</span>
+          </button>
+        ))}
+        <button className="combat-btn combat-btn--flee" onClick={onFlee}><Footprints size={16}/> 도망</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== PANELS ============================== */
+
+function Modal({ children, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><X size={18}/></button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatusPanel({ character, updateChar }) {
+  const allocate = (key) => updateChar((c) => { if (c.statPoints > 0) { c.stats[key] += 1; c.statPoints -= 1; } });
+  return (
+    <div className="panel">
+      <div className="panel__title">상태</div>
+      <div className="status-summary">
+        <div>{character.name} · {character.race} · Lv.{character.level}</div>
+        <div className="status-summary__muted">직업: {character.job ? JOBS[character.job].name : "미정"}</div>
+        <div className="status-summary__muted">경험치 {character.xp} / {xpForLevel(character.level)}</div>
+        {character.statPoints > 0 && <div className="status-summary__points">분배 가능 포인트: {character.statPoints}</div>}
+      </div>
+      <div className="stat-grid">
+        {STAT_KEYS.map((k) => (
+          <div key={k} className="stat-cell">
+            <div className="stat-cell__label">{STAT_LABELS[k]}</div>
+            <div className="stat-cell__value">{character.stats[k]}</div>
+            {character.statPoints > 0 && <button className="mini-plus" onClick={() => allocate(k)}>+</button>}
+          </div>
+        ))}
+      </div>
+      <div className="appearance-list">
+        <div className="appearance-row">{HEIGHT_TABLE[character.appearance.height]}</div>
+        <div className="appearance-row">{BUILD_TABLE[character.appearance.build]}</div>
+        <div className="appearance-row">{FEATURE_TABLE[character.appearance.feature]}</div>
+      </div>
+    </div>
+  );
+}
+
+function InventoryPanel({ character, updateChar }) {
+  const [selected, setSelected] = useState(null);
+  const discard = (id, qty) => updateChar((c) => {
+    const item = c.inventory.find((i) => i.id === id);
+    if (!item) return;
+    item.qty -= qty;
+    if (item.qty <= 0) c.inventory = c.inventory.filter((i) => i.id !== id);
+    setSelected(null);
+  });
+  const slots = [...character.inventory, ...Array(Math.max(0, 10 - character.inventory.length)).fill(null)];
+  return (
+    <div className="panel">
+      <div className="panel__title">가방 ({character.inventory.length}/10)</div>
+      <div className="inv-grid">
+        {slots.map((item, idx) => (
+          <div key={idx} className={`inv-slot ${item ? "inv-slot--filled" : ""}`} onClick={() => item && setSelected(item)}>
+            {item ? (<><span className="inv-slot__name">{item.name}</span><span className="inv-slot__qty">×{item.qty}</span></>) : <span className="inv-slot__empty">·</span>}
+          </div>
+        ))}
+      </div>
+      {selected && (
+        <div className="inv-detail">
+          <div className="inv-detail__name">{selected.name} ×{selected.qty}</div>
+          <div className="inv-detail__actions">
+            <button className="secondary-btn" onClick={() => discard(selected.id, 1)}>1개 버리기</button>
+            <button className="danger-btn" onClick={() => discard(selected.id, selected.qty)}>전부 버리기</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuestPanel({ character }) {
+  return (
+    <div className="panel">
+      <div className="panel__title">퀘스트</div>
+      {character.quests.map((q) => (
+        <div key={q.id} className="quest-card">
+          <div className="quest-card__title">{q.title} <span className={`quest-tag quest-tag--${q.status}`}>{q.status === "active" ? "진행중" : "완료"}</span></div>
+          {q.objectives.map((o, i) => (
+            <div key={i} className="quest-objective">
+              <span className={`quest-check ${o.done ? "quest-check--done" : ""}`}>{o.done ? "✓" : ""}</span>
+              <span className={o.done ? "quest-objective--done" : ""}>{o.text}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BestiaryPanel({ character }) {
+  const [selected, setSelected] = useState(null);
+  return (
+    <div className="panel">
+      <div className="panel__title">몬스터 도감</div>
+      <div className="bestiary-grid">
+        {character.bestiary.map((m) => (
+          <div key={m.id} className={`bestiary-card ${m.discovered ? "" : "bestiary-card--hidden"}`} onClick={() => m.discovered && setSelected(m)}>
+            <div className="bestiary-card__icon">{m.discovered ? "👹" : "?"}</div>
+            <div className="bestiary-card__name">{m.discovered ? m.name : "???"}</div>
+          </div>
+        ))}
+      </div>
+      {selected && (
+        <Modal onClose={() => setSelected(null)}>
+          <div className="panel__title">{selected.name}</div>
+          <div className="status-summary__muted">티어 {selected.tier} · HP {selected.hp}</div>
+          <div className="appearance-row">{selected.desc}</div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ============================== GLOBAL STYLE ============================== */
+
+function GlobalStyle() {
+  return (
+    <style>{`
+      .esna-root { --ink:#171009; --panel:#211809; --panel-2:#2a1f10; --parchment:#e9dcbd; --parchment-dim:#c9bfa8;
+        --ember:#c8532e; --gold:#c9963f; --teal:#3f8a72; --danger:#a5342a;
+        max-width:480px; margin:0 auto; min-height:100vh; background:var(--ink); color:var(--parchment);
+        font-family: Georgia, 'Noto Serif KR', serif; display:flex; flex-direction:column; position:relative; }
+      .esna-root button { font-family: inherit; cursor:pointer; }
+
+      /* Creation */
+      .creation-screen { flex:1; display:flex; flex-direction:column; padding:20px 18px 100px; }
+      .creation-eyebrow { font-size:11px; letter-spacing:.12em; color:var(--gold); text-transform:uppercase; margin-bottom:14px; }
+      .step-card { background:var(--panel); border:1px solid #3a2c14; border-radius:10px; padding:18px; }
+      .step-card__title { font-size:17px; margin:0 0 14px; color:var(--parchment); }
+      .text-input { width:100%; background:var(--panel-2); border:1px solid #4a3a1c; color:var(--parchment); border-radius:8px; padding:12px; font-size:15px; min-height:44px; box-sizing:border-box; }
+      .text-input--sm { margin-top:6px; }
+      .choice-grid { display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+      .choice-grid--wrap { flex-direction:row; flex-wrap:wrap; }
+      .choice-grid--col { flex-direction:column; }
+      .choice-btn { min-height:44px; background:var(--panel-2); border:1px solid #4a3a1c; color:var(--parchment); border-radius:8px; padding:10px 14px; font-size:14px; text-align:left; }
+      .choice-btn--sm { min-height:38px; flex:1 1 auto; text-align:center; }
+      .choice-btn--active { border-color:var(--gold); background:#3a2c10; color:var(--gold); }
+      .primary-btn { min-height:48px; background:var(--ember); color:#fff5e6; border:none; border-radius:8px; padding:0 18px; font-size:15px; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:14px; width:100%; }
+      .primary-btn:disabled { opacity:.4; }
+      .secondary-btn { min-height:44px; background:transparent; border:1px solid #4a3a1c; color:var(--parchment-dim); border-radius:8px; padding:0 16px; }
+      .danger-btn { min-height:44px; background:var(--danger); color:#fff; border:none; border-radius:8px; padding:0 16px; }
+      .creation-nav { display:flex; gap:10px; margin-top:16px; }
+      .creation-nav .primary-btn { margin-top:0; }
+      .race-result { margin-top:10px; }
+      .race-result__name { font-size:18px; color:var(--gold); }
+      .race-result__desc { font-size:13px; color:var(--parchment-dim); margin:4px 0 8px; }
+      .mod-chip { display:inline-block; background:var(--panel-2); border:1px solid #4a3a1c; border-radius:20px; padding:3px 10px; font-size:12px; margin:2px 4px 0 0; }
+      .bg-question { margin-bottom:16px; }
+      .bg-question__text { font-size:14px; margin-bottom:6px; color:var(--parchment-dim); }
+      .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+      .stat-grid--summary { margin-bottom:10px; }
+      .stat-cell { background:var(--panel-2); border:1px solid #4a3a1c; border-radius:8px; padding:8px; text-align:center; position:relative; }
+      .stat-cell--sm { padding:6px; }
+      .stat-cell__label { font-size:11px; color:var(--parchment-dim); }
+      .stat-cell__value { font-size:20px; font-family: 'Courier New', monospace; }
+      .stat-cell__mod { font-size:11px; color:var(--gold); }
+      .mini-plus { position:absolute; top:2px; right:4px; background:var(--ember); border:none; color:#fff; border-radius:50%; width:20px; height:20px; font-size:13px; line-height:1; }
+      .appearance-list { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+      .appearance-row { font-size:13px; color:var(--parchment-dim); }
+      .summary-card { display:flex; flex-direction:column; gap:10px; }
+      .summary-line { font-size:14px; }
+      .summary-line--muted { color:var(--parchment-dim); font-size:12px; }
+
+      /* Game */
+      .game-header { padding:14px 16px 10px; background:var(--panel); border-bottom:1px solid #3a2c14; display:flex; flex-direction:column; gap:6px; position:sticky; top:0; z-index:5; }
+      .game-header__title { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); margin-bottom:2px; }
+      .bar-fill { background:linear-gradient(90deg,#7a2e20,var(--ember)); }
+      .bar-fill--hp { background:linear-gradient(90deg,#7a2e20,var(--ember)); }
+      .bar-fill--mp { background:linear-gradient(90deg,#1e4f6b,#3f8ab0); }
+      .bar-fill--enemy { background:linear-gradient(90deg,#6b1e1e,#a5342a); }
+
+      .log-scroll { flex:1; overflow-y:auto; padding:14px 16px 12px; display:flex; flex-direction:column; gap:10px; }
+      .log-narrative { font-size:14.5px; line-height:1.6; color:var(--parchment); }
+      .log-system { font-size:12.5px; color:var(--gold); background:#2a1f10; border-left:2px solid var(--gold); padding:6px 10px; border-radius:4px; }
+      .log-player { align-self:flex-end; background:var(--panel-2); border:1px solid #4a3a1c; border-radius:12px 12px 2px 12px; padding:8px 12px; font-size:14px; max-width:80%; }
+
+      .dice-card { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:6px; background:#2a1f10;
+        border:1px solid #4a3a1c; border-left:4px solid var(--parchment-dim); position:relative; }
+      .dice-card--success { border-left-color:var(--teal); }
+      .dice-card--fail { border-left-color:#6b5a3a; opacity:.85; }
+      .dice-card--crit-success { border-left-color:var(--gold); box-shadow:0 0 10px rgba(201,150,63,.35); }
+      .dice-card--crit-fail { border-left-color:var(--danger); }
+      .dice-card__icon { color:var(--gold); flex-shrink:0; }
+      .dice-card__body { flex:1; }
+      .dice-card__label { font-size:11px; color:var(--parchment-dim); }
+      .dice-card__math { font-family:'Courier New',monospace; font-size:13.5px; }
+      .dice-card__outcome { font-size:12px; font-weight:bold; padding:3px 8px; border-radius:20px; background:#3a2c14; }
+      .dice-card--success .dice-card__outcome, .dice-card--crit-success .dice-card__outcome { color:var(--teal); }
+      .dice-card--crit-success .dice-card__outcome { color:var(--gold); }
+      .dice-card--fail .dice-card__outcome, .dice-card--crit-fail .dice-card__outcome { color:var(--danger); }
+
+      .suggestion-row { display:flex; flex-wrap:wrap; gap:8px; padding:2px 16px 8px; }
+      .suggestion-row--floating { position:sticky; bottom:126px; background:linear-gradient(0deg,var(--ink) 60%,transparent); padding-top:10px; }
+      .suggestion-btn { min-height:44px; background:var(--panel-2); border:1px solid #4a3a1c; color:var(--parchment); border-radius:20px; padding:8px 14px; font-size:13px; }
+      .suggestion-btn:active { background:#3a2c10; }
+
+      .input-row { display:flex; gap:8px; padding:8px 16px; border-top:1px solid #3a2c14; background:var(--panel); }
+      .send-btn { min-width:44px; background:var(--ember); border:none; color:#fff; border-radius:8px; }
+
+      .combat-panel { padding:12px 16px; background:#241608; border-top:1px solid #4a3a1c; }
+      .combat-panel__enemy-name { font-size:14px; margin-bottom:4px; color:var(--parchment); }
+      .combat-panel__actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+      .combat-btn { min-height:44px; flex:1 1 auto; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:8px; border:none; font-size:13px; padding:0 12px; }
+      .combat-btn--atk { background:var(--ember); color:#fff; }
+      .combat-btn--skill { background:#2a4a5c; color:#dff0f5; }
+      .combat-btn--flee { background:transparent; border:1px solid #4a3a1c; color:var(--parchment-dim); }
+      .mp-cost { font-size:10px; opacity:.8; margin-left:2px; }
+
+      .job-pick { padding:14px 16px; background:#241608; border-top:1px solid #4a3a1c; }
+      .job-pick__title { font-size:14px; margin-bottom:8px; color:var(--gold); }
+
+      .bottom-nav { display:flex; border-top:1px solid #3a2c14; background:var(--panel); position:sticky; bottom:0; }
+      .nav-btn { flex:1; min-height:56px; background:none; border:none; color:var(--parchment-dim); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:10px; }
+      .nav-btn:active { color:var(--gold); }
+
+      .modal-overlay { position:fixed; inset:0; background:rgba(10,7,3,.7); display:flex; align-items:flex-end; z-index:20; }
+      .modal-sheet { width:100%; max-width:480px; margin:0 auto; background:var(--panel); border-radius:16px 16px 0 0; padding:20px 18px 28px; max-height:80vh; overflow-y:auto; position:relative; border-top:1px solid #4a3a1c; }
+      .modal-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--parchment-dim); }
+      .panel__title { font-size:16px; color:var(--gold); margin-bottom:12px; }
+      .status-summary { font-size:13px; color:var(--parchment); margin-bottom:10px; display:flex; flex-direction:column; gap:3px; }
+      .status-summary__muted { color:var(--parchment-dim); font-size:12px; }
+      .status-summary__points { color:var(--gold); font-size:12px; }
+
+      .inv-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+      .inv-slot { min-height:56px; background:var(--panel-2); border:1px solid #4a3a1c; border-radius:8px; padding:8px; display:flex; flex-direction:column; justify-content:center; }
+      .inv-slot--filled { border-color:#5a4a24; }
+      .inv-slot__name { font-size:13px; }
+      .inv-slot__qty { font-size:11px; color:var(--gold); }
+      .inv-slot__empty { color:#4a3a1c; text-align:center; }
+      .inv-detail { margin-top:14px; background:var(--panel-2); border-radius:8px; padding:12px; }
+      .inv-detail__name { font-size:14px; margin-bottom:8px; }
+      .inv-detail__actions { display:flex; gap:8px; }
+
+      .quest-card { background:var(--panel-2); border:1px solid #4a3a1c; border-radius:8px; padding:12px; margin-bottom:10px; }
+      .quest-card__title { font-size:14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+      .quest-tag { font-size:10px; padding:2px 8px; border-radius:10px; }
+      .quest-tag--active { background:#3a2c10; color:var(--gold); }
+      .quest-tag--completed { background:#1e3a2c; color:var(--teal); }
+      .quest-objective { display:flex; gap:8px; font-size:12.5px; color:var(--parchment-dim); margin-top:4px; }
+      .quest-check { width:16px; color:var(--teal); }
+      .quest-objective--done { text-decoration:line-through; opacity:.6; }
+
+      .bestiary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+      .bestiary-card { aspect-ratio:1; background:var(--panel-2); border:1px solid #4a3a1c; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+      .bestiary-card--hidden { opacity:.5; }
+      .bestiary-card__icon { font-size:22px; }
+      .bestiary-card__name { font-size:10px; color:var(--parchment-dim); text-align:center; padding:0 4px; }
+
+      .confirm-box__title { font-size:15px; margin-bottom:6px; }
+      .confirm-box__desc { font-size:12.5px; color:var(--parchment-dim); margin-bottom:16px; }
+      .confirm-box__actions { display:flex; gap:10px; }
+    `}</style>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
