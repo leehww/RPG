@@ -1,6 +1,6 @@
 {
-  "name": "에스나 대륙",
-  "short_name": "에스나 대륙",
+  "name": "텍스트 RPG",
+  "short_name": "텍스트 RPG",
   "description": "텍스트 기반 판타지 TRPG",
   "start_url": "./index.html",
   "scope": "./",
