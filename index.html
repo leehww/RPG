@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>에스나 대륙</title>
+<title>텍스트 RPG</title>
 <meta name="description" content="텍스트 기반 판타지 TRPG - 에스나 대륙" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon-192.png" />
@@ -24,7 +24,6 @@
 <script type="text/babel" data-presets="react">
 const { useState, useRef, useEffect } = React;
 
-// Lightweight emoji-based icon stubs (no external icon library needed for the standalone build)
 const mkIcon = (emoji) => ({ size }) => React.createElement("span", { style: { fontSize: (size||16) + "px", lineHeight: 1, display: "inline-block" } }, emoji);
 const BookOpen = mkIcon("📖");
 const ScrollText = mkIcon("📜");
@@ -199,12 +198,17 @@ function CreationFlow({ onComplete }) {
 
   const rollStats = () => {
     const base = {};
-    STAT_KEYS.forEach((k) => { base[k] = rollDice(3, 6); });
+    const rolls = {};
+    STAT_KEYS.forEach((k) => {
+      const r = [rollD(6), rollD(6), rollD(6)];
+      rolls[k] = r;
+      base[k] = r[0] + r[1] + r[2];
+    });
     const race = RACES[draft.raceRoll];
     const final = { ...base };
     if (race.mods) STAT_KEYS.forEach((k) => { final[k] = clamp((final[k] || 0) + (race.mods[k] || 0), 1, 20); });
     if (race.choiceBonus && draft.bonusChoice) final[draft.bonusChoice] += 1;
-    setDraft((d) => ({ ...d, stats: final }));
+    setDraft((d) => ({ ...d, stats: final, statRolls: rolls }));
   };
 
   const rollAppearance = () => {
@@ -315,6 +319,7 @@ function CreationFlow({ onComplete }) {
                   <div className="stat-cell__label">{STAT_LABELS[k]}</div>
                   <div className="stat-cell__value">{draft.stats[k]}</div>
                   <div className="stat-cell__mod">{statMod(draft.stats[k]) >= 0 ? "+" : ""}{statMod(draft.stats[k])}</div>
+                  <div className="stat-cell__rolls">{draft.statRolls[k].join(" + ")}</div>
                 </div>
               ))}
             </div>
@@ -689,7 +694,7 @@ function App() {
     <div className="esna-root">
       <GlobalStyle />
       <div className="game-header">
-        <div className="game-header__title">에스나 대륙</div>
+        <div className="game-header__title">텍스트 RPG</div>
         <Bar value={character.hp} max={character.maxHp} colorClass="bar-fill bar-fill--hp" label="HP" />
         <Bar value={character.mp} max={character.maxMp} colorClass="bar-fill bar-fill--mp" label="MP" />
       </div>
@@ -956,6 +961,7 @@ function GlobalStyle() {
       .stat-cell__label { font-size:11px; color:var(--parchment-dim); }
       .stat-cell__value { font-size:20px; font-family: 'Courier New', monospace; }
       .stat-cell__mod { font-size:11px; color:var(--gold); }
+      .stat-cell__rolls { font-size:9px; color:#6b5a3a; margin-top:2px; }
       .mini-plus { position:absolute; top:2px; right:4px; background:var(--ember); border:none; color:#fff; border-radius:50%; width:20px; height:20px; font-size:13px; line-height:1; }
       .appearance-list { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
       .appearance-row { font-size:13px; color:var(--parchment-dim); }
