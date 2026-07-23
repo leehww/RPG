@@ -74,55 +74,77 @@ const BG_QUESTIONS = [
   },
 ];
 
+// 종족마다 타고난 기본 특성(스킬) — 특정 판정 유형에 고정 보정을 준다
+const RACE_TRAITS = {
+  1: { name: "만능의 재능", desc: "무엇에도 치우치지 않는 균형 잡힌 감각으로, 모든 판정에 은은한 보정을 받는다", checkType: "all", bonus: 1 },
+  2: { name: "달빛 걸음", desc: "숲의 그림자에 녹아드는 법을 안다", checkType: "stealth", bonus: 2 },
+  3: { name: "장인의 손", desc: "기계와 장치를 다루는 솜씨가 남다르다", checkType: "trap", bonus: 2 },
+  4: { name: "전장의 기백", desc: "싸움에서 쉽게 물러서지 않는 압도적인 기세", checkType: "combat", bonus: 2 },
+  5: { name: "날렵한 야성", desc: "위험을 감지하면 그 누구보다 빠르게 몸을 뺀다", checkType: "flee", bonus: 2 },
+  6: { name: "행운아", desc: "타고난 붙임성으로 상대의 마음을 쉽게 얻는다", checkType: "persuade", bonus: 2 },
+};
+
+// 과거 배경(직업 이력)에 따라 붙는 특성(스킬) — 커스텀 입력 시에는 부여되지 않음
+const PAST_TRAITS = {
+  "작은 마을의 사냥꾼": { name: "추적자의 눈", desc: "흔적과 함정을 놓치지 않는다", checkType: "trap", bonus: 1 },
+  "몰락한 귀족가의 자제": { name: "품위의 화술", desc: "격식 있는 언변으로 상대를 설득한다", checkType: "persuade", bonus: 1 },
+  "떠돌이 용병": { name: "실전 감각", desc: "수많은 실전으로 다져진 몸놀림", checkType: "combat", bonus: 1 },
+  "신전에서 자란 고아": { name: "은둔의 습관", desc: "낯선 곳에서도 조용히 숨어 지내는 법을 안다", checkType: "stealth", bonus: 1 },
+};
+
 // 2~12 (2d6) 외모 테이블
 const HEIGHT_TABLE = { 2:"놀라울 만큼 왜소한 키", 3:"또래보다 눈에 띄게 작은 키", 4:"작은 편", 5:"약간 작은 편", 6:"평균보다 살짝 작은 키", 7:"평범한 키", 8:"평균보다 살짝 큰 키", 9:"큰 편", 10:"눈에 띄게 큰 키", 11:"우뚝한 장신", 12:"올려다봐야 하는 거인 같은 키" };
 const BUILD_TABLE = { 2:"뼈만 앙상한 몸", 3:"매우 마른 체형", 4:"마른 편", 5:"호리호리한 체형", 6:"평균보다 살짝 마른 체형", 7:"평범한 체형", 8:"평균보다 다부진 체형", 9:"다부진 체형", 10:"근육질의 몸", 11:"거대한 근육질의 몸", 12:"보는 이를 압도하는 육중한 체구" };
 const FEATURE_TABLE = { 2:"한쪽 눈이 다른 색인 오드아이", 3:"얼굴을 가로지르는 오래된 흉터", 4:"유난히 낮고 허스키한 목소리", 5:"한쪽 팔에 새겨진 낡은 문신", 6:"살짝 그을린 피부", 7:"특별한 특징 없는 수수한 인상", 8:"유난히 맑고 또렷한 눈동자", 9:"희끗희끗 새치가 섞인 머리카락", 10:"목덜미의 화상 자국", 11:"한쪽 귀 끝이 짐승처럼 뾰족함", 12:"보는 사람이 저도 모르게 시선을 뺏기는 인상" };
 
 const JOBS = {
-  warrior: { name: "전사", atkStat: "str", weaponDmg: 6, skills: [
-    { tier:1, name:"강타", mp:3, dmgMult:1.4, desc:"묵직한 일격을 내리친다" },
-    { tier:2, name:"방패 밀치기", mp:5, dmgMult:1.2, desc:"상대의 균형을 무너뜨린다" },
-    { tier:3, name:"연속 베기", mp:8, dmgMult:1.6, desc:"두 번의 칼질을 몰아친다" },
-    { tier:4, name:"투신의 함성", mp:12, dmgMult:1.9, desc:"전장을 뒤흔드는 함성" },
-    { tier:5, name:"파쇄격", mp:18, dmgMult:2.4, desc:"모든 것을 부수는 최후의 일격" },
+  warrior: { name: "전사", atkStat: "str", weaponDie: "1d8", skills: [
+    { tier:1, name:"강타", mp:3, diceBonus:1, desc:"묵직한 일격을 내리친다 (+1d6)" },
+    { tier:2, name:"방패 밀치기", mp:5, diceBonus:2, desc:"상대의 균형을 무너뜨린다 (+2d6)" },
+    { tier:3, name:"연속 베기", mp:8, diceBonus:3, desc:"두 번의 칼질을 몰아친다 (+3d6)" },
+    { tier:4, name:"투신의 함성", mp:12, diceBonus:4, desc:"전장을 뒤흔드는 함성 (+4d6)" },
+    { tier:5, name:"파쇄격", mp:18, diceBonus:6, desc:"모든 것을 부수는 최후의 일격 (+6d6)" },
   ]},
-  archer: { name: "궁수", atkStat: "dex", weaponDmg: 5, skills: [
-    { tier:1, name:"조준 사격", mp:3, dmgMult:1.4, desc:"급소를 노린 화살" },
-    { tier:2, name:"연사", mp:5, dmgMult:1.3, desc:"빠르게 두 발을 쏜다" },
-    { tier:3, name:"관통 화살", mp:8, dmgMult:1.7, desc:"방어를 꿰뚫는 화살" },
-    { tier:4, name:"불화살 세례", mp:12, dmgMult:1.9, desc:"불타는 화살을 퍼붓는다" },
-    { tier:5, name:"천공의 화살", mp:18, dmgMult:2.5, desc:"하늘을 가르는 필살의 일격" },
+  archer: { name: "궁수", atkStat: "dex", weaponDie: "1d6", skills: [
+    { tier:1, name:"조준 사격", mp:3, diceBonus:1, desc:"급소를 노린 화살 (+1d6)" },
+    { tier:2, name:"연사", mp:5, diceBonus:2, desc:"빠르게 두 발을 쏜다 (+2d6)" },
+    { tier:3, name:"관통 화살", mp:8, diceBonus:3, desc:"방어를 꿰뚫는 화살 (+3d6)" },
+    { tier:4, name:"불화살 세례", mp:12, diceBonus:4, desc:"불타는 화살을 퍼붓는다 (+4d6)" },
+    { tier:5, name:"천공의 화살", mp:18, diceBonus:6, desc:"하늘을 가르는 필살의 일격 (+6d6)" },
   ]},
-  mage: { name: "마법사", atkStat: "int", weaponDmg: 4, skills: [
-    { tier:1, name:"화염구", mp:4, dmgMult:1.5, desc:"작은 불덩이를 날린다" },
-    { tier:2, name:"얼음창", mp:6, dmgMult:1.6, desc:"날카로운 얼음창을 던진다" },
-    { tier:3, name:"번개 사슬", mp:9, dmgMult:1.8, desc:"전류가 튀며 퍼진다" },
-    { tier:4, name:"운석 낙하", mp:13, dmgMult:2.1, desc:"하늘에서 불덩이가 떨어진다" },
-    { tier:5, name:"멸계의 마법진", mp:20, dmgMult:2.6, desc:"금기에 가까운 파괴 마법" },
+  mage: { name: "마법사", atkStat: "int", weaponDie: "1d6", skills: [
+    { tier:1, name:"화염구", mp:4, diceBonus:2, desc:"작은 불덩이를 날린다 (+2d6)" },
+    { tier:2, name:"얼음창", mp:6, diceBonus:3, desc:"날카로운 얼음창을 던진다 (+3d6)" },
+    { tier:3, name:"번개 사슬", mp:9, diceBonus:4, desc:"전류가 튀며 퍼진다 (+4d6)" },
+    { tier:4, name:"운석 낙하", mp:13, diceBonus:5, desc:"하늘에서 불덩이가 떨어진다 (+5d6)" },
+    { tier:5, name:"멸계의 마법진", mp:20, diceBonus:7, desc:"금기에 가까운 파괴 마법 (+7d6)" },
   ]},
-  rogue: { name: "도적", atkStat: "dex", weaponDmg: 5, skills: [
-    { tier:1, name:"기습", mp:3, dmgMult:1.5, desc:"허점을 노려 찌른다" },
-    { tier:2, name:"독날", mp:5, dmgMult:1.3, desc:"독을 바른 칼날" },
-    { tier:3, name:"그림자 밟기", mp:8, dmgMult:1.7, desc:"그림자를 타고 접근해 벤다" },
-    { tier:4, name:"연쇄 자상", mp:12, dmgMult:2.0, desc:"보이지 않는 속도로 난자한다" },
-    { tier:5, name:"천참격", mp:18, dmgMult:2.5, desc:"급소만을 노리는 필살의 연격" },
+  rogue: { name: "도적", atkStat: "dex", weaponDie: "1d6", skills: [
+    { tier:1, name:"기습", mp:3, diceBonus:2, desc:"허점을 노려 찌른다 (+2d6)" },
+    { tier:2, name:"독날", mp:5, diceBonus:2, desc:"독을 바른 칼날 (+2d6)" },
+    { tier:3, name:"그림자 밟기", mp:8, diceBonus:3, desc:"그림자를 타고 접근해 벤다 (+3d6)" },
+    { tier:4, name:"연쇄 자상", mp:12, diceBonus:5, desc:"보이지 않는 속도로 난자한다 (+5d6)" },
+    { tier:5, name:"천참격", mp:18, diceBonus:6, desc:"급소만을 노리는 필살의 연격 (+6d6)" },
   ]},
 };
 
+const JOB_KEYS_BY_ROLL = { 1: "warrior", 2: "archer", 3: "mage", 4: "rogue" };
+
 const MONSTERS = [
-  { id:"m1", name:"녹슨 늑대", tier:1, hp:18, dex:8, str:6, dmg:3, xp:20, discovered:true, desc:"재의 폐허지대를 떠도는 굶주린 늑대", loot:[{id:"i_fang",name:"늑대 이빨",chance:0.5},{id:"i_gold",name:"소량의 금화",chance:0.6}] },
-  { id:"m2", name:"들개 무리의 우두머리", tier:1, hp:24, dex:10, str:9, dmg:4, xp:28, discovered:false, desc:"무리를 이끄는 사나운 들개", loot:[{id:"i_hide",name:"질긴 가죽",chance:0.5}] },
-  { id:"m3", name:"재의 형제단 척후병", tier:2, hp:32, dex:12, str:10, dmg:6, xp:45, discovered:false, desc:"재의 형제단에서 파견한 정찰병", loot:[{id:"i_dagger",name:"낡은 단검",chance:0.35},{id:"i_gold",name:"소량의 금화",chance:0.7}] },
-  { id:"m4", name:"고대 아스텔의 파수병", tier:3, hp:48, dex:9, str:14, dmg:9, xp:70, discovered:false, desc:"고대 아스텔 문명이 남긴 석조 골렘", loot:[{id:"i_core",name:"아스텔의 파편",chance:0.4}] },
-  { id:"m5", name:"살린 항의 밀수꾼", tier:2, hp:28, dex:13, str:8, dmg:5, xp:40, discovered:false, desc:"항구에서 암약하는 무장 밀수꾼", loot:[{id:"i_gold",name:"소량의 금화",chance:0.8}] },
-  { id:"m6", name:"아르덴의 배신 기사", tier:3, hp:52, dex:11, str:13, dmg:8, xp:75, discovered:false, desc:"왕국을 등진 타락한 기사", loot:[{id:"i_sword",name:"낡은 장검",chance:0.3}] },
+  { id:"m1", name:"녹슨 늑대", tier:1, hp:18, dex:8, str:6, dmgDie:"1d4", dmgBonus:1, xp:20, discovered:true, desc:"재의 폐허지대를 떠도는 굶주린 늑대", loot:[{id:"i_fang",name:"늑대 이빨",chance:0.5},{id:"i_gold",name:"소량의 금화",chance:0.6}] },
+  { id:"m2", name:"들개 무리의 우두머리", tier:1, hp:24, dex:10, str:9, dmgDie:"1d6", dmgBonus:0, xp:28, discovered:false, desc:"무리를 이끄는 사나운 들개", loot:[{id:"i_hide",name:"질긴 가죽",chance:0.5}] },
+  { id:"m3", name:"재의 형제단 척후병", tier:2, hp:32, dex:12, str:10, dmgDie:"1d6", dmgBonus:2, xp:45, discovered:false, desc:"재의 형제단에서 파견한 정찰병", loot:[{id:"i_dagger",name:"낡은 단검",chance:0.35},{id:"i_gold",name:"소량의 금화",chance:0.7}] },
+  { id:"m4", name:"고대 아스텔의 파수병", tier:3, hp:48, dex:9, str:14, dmgDie:"1d8", dmgBonus:3, xp:70, discovered:false, desc:"고대 아스텔 문명이 남긴 석조 골렘", loot:[{id:"i_core",name:"아스텔의 파편",chance:0.4}] },
+  { id:"m5", name:"살린 항의 밀수꾼", tier:2, hp:28, dex:13, str:8, dmgDie:"1d6", dmgBonus:1, xp:40, discovered:false, desc:"항구에서 암약하는 무장 밀수꾼", loot:[{id:"i_gold",name:"소량의 금화",chance:0.8}] },
+  { id:"m6", name:"아르덴의 배신 기사", tier:3, hp:52, dex:11, str:13, dmgDie:"1d8", dmgBonus:2, xp:75, discovered:false, desc:"왕국을 등진 타락한 기사", loot:[{id:"i_sword",name:"낡은 장검",chance:0.3}] },
 ];
 
 /* ============================== HELPERS ============================== */
 
 const rollD = (sides) => Math.floor(Math.random() * sides) + 1;
 const rollDice = (count, sides) => Array.from({ length: count }, () => rollD(sides)).reduce((a,b)=>a+b,0);
+const rollDiceArray = (count, sides) => Array.from({ length: count }, () => rollD(sides));
+const parseDie = (str) => { const [c, s] = str.split("d").map(Number); return { count: c, sides: s }; };
 const statMod = (stat) => Math.floor(stat / 2) - 3;
 const uid = () => Math.random().toString(36).slice(2, 10);
 const xpForLevel = (lvl) => lvl * 100;
@@ -170,8 +192,41 @@ function DiceCard({ roll }) {
   );
 }
 
-function LogEntry({ entry }) {
+function DamageCard({ result }) {
+  return (
+    <div className="dice-card dice-card--damage">
+      <div className="dice-card__icon"><Sword size={18} /></div>
+      <div className="dice-card__body">
+        <div className="dice-card__label">{result.label}</div>
+        <div className="dice-card__math">
+          🎲 {result.rolls.join(" + ")}{result.bonus ? ` + ${result.bonus}` : ""} = <b>{result.total}</b> 데미지
+        </div>
+      </div>
+      <div className="dice-card__outcome dice-card__outcome--dmg">{result.total}</div>
+    </div>
+  );
+}
+
+function PendingRollCard({ entry, onRoll }) {
+  const isDamage = entry.kind === "damage";
+  return (
+    <div className={`dice-card dice-card--pending ${isDamage ? "dice-card--pending-damage" : ""}`}>
+      <div className="dice-card__icon dice-card__icon--pulse">{isDamage ? <Sword size={18} /> : <Dices size={18} />}</div>
+      <div className="dice-card__body">
+        <div className="dice-card__label">{entry.label}</div>
+        <div className="dice-card__math">
+          {isDamage ? `${entry.diceCount}d${entry.diceSides}${entry.bonus ? ` + ${entry.bonus}` : ""}` : `DC ${entry.dc} · 보정 ${entry.mod >= 0 ? "+" : ""}${entry.mod}`}
+        </div>
+      </div>
+      <button className="roll-btn" onClick={onRoll}>굴리기</button>
+    </div>
+  );
+}
+
+function LogEntry({ entry, onResolvePending }) {
   if (entry.type === "dice") return <DiceCard roll={entry.roll} />;
+  if (entry.type === "damage") return <DamageCard result={entry.result} />;
+  if (entry.type === "pending") return <PendingRollCard entry={entry} onRoll={() => onResolvePending(entry.id)} />;
   if (entry.type === "player") return <div className="log-player">{entry.text}</div>;
   if (entry.type === "system") return <div className="log-system">{entry.text}</div>;
   return <div className="log-narrative">{entry.text}</div>;
@@ -182,11 +237,11 @@ function LogEntry({ entry }) {
 function CreationFlow({ onComplete }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState({
-    name: "", age: "", gender: "", raceRoll: null, bg: {},
+    name: "", age: "", gender: "", raceRoll: null, jobRoll: null, bg: {},
     stats: null, appearance: null, bonusChoice: null,
   });
 
-  const steps = ["name","age","gender","race","background","stats","appearance","summary"];
+  const steps = ["name","age","gender","race","job","background","stats","appearance","summary"];
   const cur = steps[step];
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
@@ -196,13 +251,18 @@ function CreationFlow({ onComplete }) {
     setDraft((d) => ({ ...d, raceRoll: r, bonusChoice: null }));
   };
 
+  const rollJob = () => {
+    const r = rollD(4);
+    setDraft((d) => ({ ...d, jobRoll: r }));
+  };
+
   const rollStats = () => {
     const base = {};
     const rolls = {};
     STAT_KEYS.forEach((k) => {
-      const r = [rollD(6), rollD(6), rollD(6)];
-      rolls[k] = r;
-      base[k] = r[0] + r[1] + r[2];
+      const r = rollD(20);
+      rolls[k] = [r];
+      base[k] = r;
     });
     const race = RACES[draft.raceRoll];
     const final = { ...base };
@@ -223,6 +283,7 @@ function CreationFlow({ onComplete }) {
     if (cur === "age") return String(draft.age).trim().length > 0 && !isNaN(Number(draft.age));
     if (cur === "gender") return !!draft.gender;
     if (cur === "race") return draft.raceRoll && (!RACES[draft.raceRoll].choiceBonus || draft.bonusChoice);
+    if (cur === "job") return !!draft.jobRoll;
     if (cur === "background") return BG_QUESTIONS.every((q) => draft.bg[q.key] && draft.bg[q.key].trim());
     if (cur === "stats") return !!draft.stats;
     if (cur === "appearance") return !!draft.appearance;
@@ -289,6 +350,25 @@ function CreationFlow({ onComplete }) {
         </StepCard>
       )}
 
+      {cur === "job" && (
+        <StepCard title="운명의 굴림 — 직업 (d4)">
+          {!draft.jobRoll ? (
+            <button className="primary-btn" onClick={rollJob}><Dices size={16}/> d4 굴리기</button>
+          ) : (
+            <>
+              <DiceCard roll={{ nat: draft.jobRoll, mod: 0, total: draft.jobRoll, dc: 0, success: true, label: "직업 굴림" }} />
+              <div className="race-result">
+                <div className="race-result__name">{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].name}</div>
+                <div className="race-result__desc">첫 스킬 「{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].skills[0].name}」을(를) 익힌 채로 여정을 시작한다</div>
+                <div className="race-result__mods">
+                  <span className="mod-chip">{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].skills[0].name}: {JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].skills[0].desc}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </StepCard>
+      )}
+
       {cur === "background" && (
         <StepCard title="지난 삶에 대하여">
           {BG_QUESTIONS.map((q) => (
@@ -297,7 +377,7 @@ function CreationFlow({ onComplete }) {
               <div className="choice-grid choice-grid--col">
                 {q.options.map((opt) => (
                   <button key={opt} className={`choice-btn ${draft.bg[q.key]===opt?"choice-btn--active":""}`}
-                    onClick={() => setDraft({ ...draft, bg: { ...draft.bg, [q.key]: opt } })}>{opt}</button>
+                    onClick={() => setDraft({ ...draft, bg: { ...draft.bg, [q.key]: opt, [`${q.key}_custom`]: "" } })}>{opt}</button>
                 ))}
                 <input className="text-input text-input--sm" placeholder="직접 입력..."
                   value={draft.bg[`${q.key}_custom`] || ""}
@@ -309,9 +389,9 @@ function CreationFlow({ onComplete }) {
       )}
 
       {cur === "stats" && (
-        <StepCard title="능력치 굴림 (3d6 × 6)">
+        <StepCard title="능력치 굴림 (d20 × 6)">
           {!draft.stats ? (
-            <button className="primary-btn" onClick={rollStats}><Dices size={16}/> 능력치 굴리기</button>
+            <button className="primary-btn" onClick={rollStats}><Dices size={16}/> d20 굴리기</button>
           ) : (
             <div className="stat-grid">
               {STAT_KEYS.map((k) => (
@@ -319,7 +399,7 @@ function CreationFlow({ onComplete }) {
                   <div className="stat-cell__label">{STAT_LABELS[k]}</div>
                   <div className="stat-cell__value">{draft.stats[k]}</div>
                   <div className="stat-cell__mod">{statMod(draft.stats[k]) >= 0 ? "+" : ""}{statMod(draft.stats[k])}</div>
-                  <div className="stat-cell__rolls">{draft.statRolls[k].join(" + ")}</div>
+                  <div className="stat-cell__rolls">🎲 {draft.statRolls[k][0]}</div>
                 </div>
               ))}
             </div>
@@ -344,7 +424,7 @@ function CreationFlow({ onComplete }) {
       {cur === "summary" && (
         <StepCard title="모험을 시작하기 전에">
           <div className="summary-card">
-            <div className="summary-line"><b>{draft.name}</b> · {draft.age}세 · {draft.gender} · {RACES[draft.raceRoll].name}</div>
+            <div className="summary-line"><b>{draft.name}</b> · {draft.age}세 · {draft.gender} · {RACES[draft.raceRoll].name} · {JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].name}</div>
             <div className="summary-line summary-line--muted">{draft.bg.motive} · {draft.bg.past} · {draft.bg.values}</div>
             <div className="stat-grid stat-grid--summary">
               {STAT_KEYS.map((k) => (
@@ -355,6 +435,20 @@ function CreationFlow({ onComplete }) {
               ))}
             </div>
             <div className="summary-line">{HEIGHT_TABLE[draft.appearance.height]}, {BUILD_TABLE[draft.appearance.build]}. {FEATURE_TABLE[draft.appearance.feature]}.</div>
+            <div className="traits-list">
+              <div className="panel__subtitle">종족 특성 · 배경 특성</div>
+              {[RACE_TRAITS[draft.raceRoll], PAST_TRAITS[draft.bg.past]].filter(Boolean).map((t) => (
+                <div key={t.name} className="trait-card">
+                  <div className="trait-card__name">{t.name}</div>
+                  <div className="trait-card__desc">{t.desc}</div>
+                </div>
+              ))}
+              <div className="panel__subtitle">직업 스킬 (1티어)</div>
+              <div className="trait-card trait-card--job">
+                <div className="trait-card__name">{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].skills[0].name}</div>
+                <div className="trait-card__desc">{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].skills[0].desc}</div>
+              </div>
+            </div>
           </div>
         </StepCard>
       )}
@@ -384,18 +478,23 @@ function StepCard({ title, children }) {
 
 function buildCharacter(draft) {
   const con = draft.stats.con;
+  const raceTrait = RACE_TRAITS[draft.raceRoll];
+  const pastTrait = PAST_TRAITS[draft.bg.past];
+  const traits = [raceTrait, pastTrait].filter(Boolean);
   return {
     name: draft.name, age: draft.age, gender: draft.gender,
     race: RACES[draft.raceRoll].name,
     background: draft.bg,
     stats: draft.stats,
     appearance: draft.appearance,
+    traits,
     level: 1, xp: 0, statPoints: 0,
     maxHp: 20 + con, hp: 20 + con,
     maxMp: 10 + draft.stats.int, mp: 10 + draft.stats.int,
     gold: 15,
-    job: null,
-    unlockedSkillTier: 0,
+    job: JOB_KEYS_BY_ROLL[draft.jobRoll],
+    unlockedSkillTier: 1,
+    hiddenSkillsGranted: 0,
     inventory: [
       { id:"i_potion", name:"체력 물약", qty:2 },
       { id:"i_gold", name:"소량의 금화", qty:15 },
@@ -411,6 +510,14 @@ function buildCharacter(draft) {
     chapterStage: 0,
   };
 }
+
+const getTraitBonus = (character, checkType) => {
+  if (!character.traits) return 0;
+  return character.traits.reduce((sum, t) => sum + (t.checkType === checkType || t.checkType === "all" ? t.bonus : 0), 0);
+};
+
+const MAX_HIDDEN_SKILLS = 2;
+const HIDDEN_SKILL_CHANCE = 0.25;
 
 const STORY_NODES = [
   {
@@ -436,7 +543,7 @@ const STORY_NODES = [
     text: (c) => `전투의 흔적을 지나 도착한 야영지에서, 재의 형제단의 문양이 새겨진 낡은 서신을 발견한다. 곁에는 부상당한 척후병이 쓰러져 있다.`,
     suggestions: [
       { label: "🗣️ 척후병을 회유해 정보를 얻는다", action: "persuade" },
-      { label: "🎁 직업의 길을 깨닫는다", action: "unlockjob" },
+      { label: "🔎 야영지를 뒤져본다", action: "trap" },
       { label: "➡️ 계속 나아간다", action: "advance" },
     ],
   },
@@ -452,15 +559,50 @@ function App() {
   const [input, setInput] = useState("");
   const [pendingPersuade, setPendingPersuade] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
-  const [jobPick, setJobPick] = useState(false);
   const logEndRef = useRef(null);
+  const pendingResolvers = useRef({});
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [log]);
 
-  const pushLog = (entry) => setLog((l) => [...l, { id: uid(), ...entry }]);
+  const pushLog = (entry) => {
+    const id = entry.id || uid();
+    setLog((l) => [...l, { ...entry, id }]);
+    return id;
+  };
   const pushNarrative = (text) => pushLog({ type: "narrative", text });
   const pushSystem = (text) => pushLog({ type: "system", text });
   const pushDice = (roll) => pushLog({ type: "dice", roll });
+
+  const hasPendingRoll = log.some((e) => e.type === "pending");
+  const hasActiveChoice = log.length > 0 && log[log.length - 1].type === "choice";
+
+  const queueRoll = (label, mod, dc, onResult) => {
+    const id = pushLog({ type: "pending", kind: "check", label, mod, dc });
+    pendingResolvers.current[id] = onResult;
+  };
+
+  const queueDamageRoll = (label, diceCount, diceSides, bonus, onResult) => {
+    const id = pushLog({ type: "pending", kind: "damage", label, diceCount, diceSides, bonus });
+    pendingResolvers.current[id] = onResult;
+  };
+
+  const resolvePendingRoll = (id) => {
+    const entry = log.find((e) => e.id === id);
+    if (!entry) return;
+    const cb = pendingResolvers.current[id];
+    delete pendingResolvers.current[id];
+    if (entry.kind === "damage") {
+      const rolls = rollDiceArray(entry.diceCount, entry.diceSides);
+      const total = rolls.reduce((a,b)=>a+b,0) + (entry.bonus || 0);
+      const result = { label: entry.label, rolls, bonus: entry.bonus || 0, total };
+      setLog((l) => l.map((e) => (e.id === id ? { id, type: "damage", result } : e)));
+      if (cb) cb(result);
+      return;
+    }
+    const roll = performCheck(entry.mod, entry.dc, entry.label);
+    setLog((l) => l.map((e) => (e.id === id ? { id, type: "dice", roll } : e)));
+    if (cb) cb(roll);
+  };
 
   const onCreationComplete = (draft) => {
     const c = buildCharacter(draft);
@@ -495,50 +637,54 @@ function App() {
 
   const doStealthCheck = () => {
     const dc = character.alert >= 2 ? 16 : 12;
-    const roll = performCheck(statMod(character.stats.dex), dc, "은신 판정");
-    pushDice(roll);
-    if (roll.success) {
-      pushNarrative("그림자 속으로 미끄러지듯 몸을 숨긴다. 아무도 눈치채지 못한 듯하다.");
-      updateChar((c) => { c.alert = Math.max(0, c.alert - 1); });
-      advanceNode();
-    } else {
-      updateChar((c) => { c.alert = Math.min(3, c.alert + 1); });
-      if (character.alert + 1 >= 3) {
-        pushNarrative("작은 돌부리에 걸려 소리를 내고 만다. 그림자 속 눈동자가 이쪽을 향한다 — 발각되었다!");
-        startCombat();
-      } else {
-        pushNarrative(`은신에 실패했지만 다행히 들키진 않은 듯하다. (경계 ${character.alert + 1}/3)`);
+    const mod = statMod(character.stats.dex) + getTraitBonus(character, "stealth");
+    queueRoll("은신 판정", mod, dc, (roll) => {
+      if (roll.success) {
+        pushNarrative("그림자 속으로 미끄러지듯 몸을 숨긴다. 아무도 눈치채지 못한 듯하다.");
+        updateChar((c) => { c.alert = Math.max(0, c.alert - 1); });
         advanceNode();
+      } else {
+        const newAlert = Math.min(3, character.alert + 1);
+        updateChar((c) => { c.alert = newAlert; });
+        if (newAlert >= 3) {
+          pushNarrative("작은 돌부리에 걸려 소리를 내고 만다. 그림자 속 눈동자가 이쪽을 향한다 — 발각되었다!");
+          startCombat();
+        } else {
+          pushNarrative(`은신에 실패했지만 다행히 들키진 않은 듯하다. (경계 ${newAlert}/3)`);
+          advanceNode();
+        }
       }
-    }
+    });
   };
 
   const doTrapCheck = () => {
     const dc = 14;
-    const roll = performCheck(statMod(character.stats.wis), dc, "함정 감지 (지혜)");
-    pushDice(roll);
-    if (roll.success) {
-      pushNarrative("발밑에서 희미한 실선을 발견한다 — 누군가 설치한 견제용 장치다.");
-      pushSystem("해제를 시도하거나, 우회할 수 있습니다.");
-      pushLog({ type: "choice", options: [
-        { label: "🔧 해제 시도 (민첩)", action: "disarm" },
-        { label: "↩️ 우회한다", action: "advance" },
-      ]});
-    } else {
-      const dmg = rollD(6) + 2;
-      pushNarrative("무심코 내디딘 발이 장치를 건드린다. 날카로운 통증이 스친다!");
-      updateChar((c) => { c.hp = Math.max(0, c.hp - dmg); });
-      pushSystem(`피해 ${dmg}을(를) 입었다.`);
-      advanceNode();
-    }
+    const mod = statMod(character.stats.wis) + getTraitBonus(character, "trap");
+    queueRoll("함정 감지 (지혜)", mod, dc, (roll) => {
+      if (roll.success) {
+        pushNarrative("발밑에서 희미한 실선을 발견한다 — 누군가 설치한 견제용 장치다.");
+        pushSystem("해제를 시도하거나, 우회할 수 있습니다.");
+        pushLog({ type: "choice", options: [
+          { label: "🔧 해제 시도 (민첩)", action: "disarm" },
+          { label: "↩️ 우회한다", action: "advance" },
+        ]});
+      } else {
+        const dmg = rollD(6) + 2;
+        pushNarrative("무심코 내디딘 발이 장치를 건드린다. 날카로운 통증이 스친다!");
+        updateChar((c) => { c.hp = Math.max(0, c.hp - dmg); });
+        pushSystem(`피해 ${dmg}을(를) 입었다.`);
+        advanceNode();
+      }
+    });
   };
 
   const doDisarm = () => {
-    const roll = performCheck(statMod(character.stats.dex), 14, "함정 해제 (민첩)");
-    pushDice(roll);
-    if (roll.success) { pushNarrative("섬세한 손놀림으로 장치를 무력화한다."); gainItem("녹슨 부품", "i_scrap", 1); }
-    else { const dmg = rollD(4); updateChar((c)=>{c.hp=Math.max(0,c.hp-dmg);}); pushNarrative("장치가 오작동하며 튕겨 나온다."); pushSystem(`피해 ${dmg}.`); }
-    advanceNode();
+    const mod = statMod(character.stats.dex) + getTraitBonus(character, "trap");
+    queueRoll("함정 해제 (민첩)", mod, 14, (roll) => {
+      if (roll.success) { pushNarrative("섬세한 손놀림으로 장치를 무력화한다."); gainItem("녹슨 부품", "i_scrap", 1); }
+      else { const dmg = rollD(4); updateChar((c)=>{c.hp=Math.max(0,c.hp-dmg);}); pushNarrative("장치가 오작동하며 튕겨 나온다."); pushSystem(`피해 ${dmg}.`); }
+      advanceNode();
+    });
   };
 
   const doPersuade = () => {
@@ -549,23 +695,46 @@ function App() {
     }
     const affinity = character.npcAffinity[npc] || 0;
     const dc = clamp(16 - Math.floor(affinity / 20), 8, 20);
-    const roll = performCheck(statMod(character.stats.cha), dc, `설득 판정 (호감도 ${affinity})`);
-    pushDice(roll);
-    updateChar((c) => {
-      c.usedTopics = [...c.usedTopics, npc];
-      c.npcAffinity[npc] = clamp(affinity + (roll.success ? 15 : -5), -100, 100);
+    const mod = statMod(character.stats.cha) + getTraitBonus(character, "persuade");
+    queueRoll(`설득 판정 (호감도 ${affinity})`, mod, dc, (roll) => {
+      updateChar((c) => {
+        c.usedTopics = [...c.usedTopics, npc];
+        c.npcAffinity[npc] = clamp(affinity + (roll.success ? 15 : -5), -100, 100);
+      });
+      if (roll.success) { pushNarrative("상대의 눈빛이 누그러진다. 유용한 정보와 함께 작은 호의를 얻는다."); gainItem("정보 쪽지", "i_note", 1); }
+      else { pushNarrative("말이 통하지 않는다. 상대는 팔짱을 낀 채 등을 돌린다."); }
+      advanceNode();
     });
-    if (roll.success) { pushNarrative("상대의 눈빛이 누그러진다. 유용한 정보와 함께 작은 호의를 얻는다."); gainItem("정보 쪽지", "i_note", 1); }
-    else { pushNarrative("말이 통하지 않는다. 상대는 팔짱을 낀 채 등을 돌린다."); }
-    advanceNode();
+  };
+
+  /* ---------- Hidden skill/job discovery (rare) ---------- */
+
+  const triggerHiddenSkill = () => {
+    if (character.hiddenSkillsGranted >= MAX_HIDDEN_SKILLS) return;
+    if (character.unlockedSkillTier >= 5) return;
+    if (Math.random() >= HIDDEN_SKILL_CHANCE) return;
+    const nextTier = character.unlockedSkillTier + 1;
+    const skill = JOBS[character.job].skills.find((s) => s.tier === nextTier);
+    if (!skill) return;
+    updateChar((c) => {
+      c.hiddenSkillsGranted = (c.hiddenSkillsGranted || 0) + 1;
+      c.unlockedSkillTier = nextTier;
+    });
+    pushSystem("✨ 우연한 깨달음의 순간");
+    pushNarrative(`거듭된 경험 끝에, 한 단계 더 깊은 경지에 닿는다. 새로운 스킬 「${skill.name}」을(를) 깨우쳤다!`);
   };
 
   const advanceNode = () => setTimeout(() => {
+    let didAdvance = false;
     setNodeIdx((i) => {
       const next = Math.min(i + 1, STORY_NODES.length - 1);
-      if (STORY_NODES[next]) pushNarrative(STORY_NODES[next].text(character));
+      if (next !== i) {
+        didAdvance = true;
+        pushNarrative(STORY_NODES[next].text(character));
+      }
       return next;
     });
+    if (didAdvance) triggerHiddenSkill();
   }, 300);
 
   /* ---------- Combat ---------- */
@@ -575,62 +744,78 @@ function App() {
     const enemy = { ...pool[Math.floor(Math.random() * pool.length)] };
     enemy.curHp = enemy.hp;
     updateChar((c) => { c.bestiary = c.bestiary.map((m) => m.id === enemy.id ? { ...m, discovered: true } : m); });
-    setCombat({ enemy, log: [] });
+    setCombat({ enemy, log: [], enemyFlustered: false });
     pushSystem(`⚔️ ${enemy.name}과(와) 전투가 시작된다!`);
   };
 
   const combatAttack = (skill=null) => {
     if (!combat) return;
-    const job = character.job ? JOBS[character.job] : null;
-    const atkStat = job ? job.atkStat : "str";
-    const mod = statMod(character.stats[atkStat]);
+    const job = JOBS[character.job];
+    const atkStat = job.atkStat;
+    const flusterBonus = combat.enemyFlustered ? 2 : 0;
+    const mod = statMod(character.stats[atkStat]) + getTraitBonus(character, "combat") + flusterBonus;
     const hitDC = 10 + Math.floor(combat.enemy.dex / 2);
-    const roll = performCheck(mod, hitDC, skill ? `${skill.name} 명중 판정` : "공격 명중 판정");
-    pushDice(roll);
+    const weaponDie = parseDie(job.weaponDie);
+    if (combat.enemyFlustered) setCombat((cb) => cb ? ({ ...cb, enemyFlustered: false }) : cb);
 
-    let mult = 0;
-    if (roll.critSuccess) mult = 1.75;
-    else if (roll.success && roll.total - hitDC >= 5) mult = 1.15;
-    else if (roll.success) mult = 1.0;
+    queueRoll(skill ? `${skill.name} 명중 판정` : "공격 명중 판정", mod, hitDC, (roll) => {
+      if (skill) updateChar((c) => { c.mp = Math.max(0, c.mp - skill.mp); });
 
-    if (skill) mult *= skill.dmgMult;
-    const baseDmg = (job ? job.weaponDmg : 3) + Math.max(0, mod);
-    const dmg = mult > 0 ? Math.max(1, Math.floor(baseDmg * mult)) : 0;
+      if (!roll.success) {
+        pushNarrative("공격이 빗나간다.");
+        queueEnemyTurn();
+        return;
+      }
 
-    if (dmg > 0) {
-      pushNarrative(`${skill ? skill.name + "을(를) 사용해 " : ""}일격을 가한다! ${dmg}의 피해를 입혔다.`);
-      setCombat((cb) => ({ ...cb, enemy: { ...cb.enemy, curHp: Math.max(0, cb.enemy.curHp - dmg) } }));
-    } else {
-      pushNarrative("공격이 빗나간다.");
-    }
-    if (skill) updateChar((c) => { c.mp = Math.max(0, c.mp - skill.mp); });
+      let diceCount = weaponDie.count + (skill ? skill.diceBonus : 0);
+      if (roll.critSuccess) diceCount *= 2;
+      else if (roll.total - hitDC >= 5) diceCount += 1;
 
-    setTimeout(() => enemyTurn(dmg), 350);
+      queueDamageRoll(
+        skill ? `${skill.name} 데미지` : "공격 데미지",
+        diceCount, weaponDie.sides, Math.max(0, mod),
+        (dmgResult) => {
+          const dmg = Math.max(1, dmgResult.total);
+          const newHp = Math.max(0, combat.enemy.curHp - dmg);
+          pushNarrative(`${skill ? skill.name + "을(를) 사용해 " : ""}일격을 가한다! ${dmg}의 피해를 입혔다.`);
+          setCombat((cb) => cb ? ({ ...cb, enemy: { ...cb.enemy, curHp: newHp } }) : cb);
+
+          if (newHp <= 0) {
+            finishCombatWin({ ...combat.enemy, curHp: 0 });
+          } else {
+            queueEnemyTurn();
+          }
+        }
+      );
+    });
   };
 
-  const enemyTurn = (playerDmgDealt) => {
-    setCombat((cb) => {
-      if (!cb) return cb;
-      const enemyHpAfter = cb.enemy.curHp;
-      if (enemyHpAfter <= 0) { finishCombatWin(cb.enemy); return null; }
-      const enemyMod = Math.floor(cb.enemy.str / 3);
-      const defDC = 10 + statMod(character.stats.dex) + 3;
-      const roll = performCheck(enemyMod, defDC, `${cb.enemy.name}의 공격`);
-      pushDice(roll);
-      let dmg = 0;
-      if (roll.critSuccess) dmg = Math.floor(cb.enemy.dmg * 1.5);
-      else if (roll.success) dmg = cb.enemy.dmg;
-      if (dmg > 0) {
-        pushNarrative(`${cb.enemy.name}이(가) 반격해 ${dmg}의 피해를 입힌다!`);
-        updateChar((c) => { c.hp = Math.max(0, c.hp - dmg); });
-      } else {
-        pushNarrative(`${cb.enemy.name}의 공격이 빗나간다.`);
+  const queueEnemyTurn = () => {
+    if (!combat) return;
+    const enemy = combat.enemy;
+    const enemyMod = Math.floor(enemy.str / 3);
+    const defDC = 10 + statMod(character.stats.dex) + 3;
+    const die = parseDie(enemy.dmgDie);
+
+    queueRoll(`${enemy.name}의 공격`, enemyMod, defDC, (roll) => {
+      if (!roll.success) {
+        pushNarrative(`${enemy.name}의 공격이 빗나간다.`);
+        return;
       }
-      return cb;
+      const diceCount = roll.critSuccess ? die.count * 2 : die.count;
+      queueDamageRoll(`${enemy.name}의 데미지`, diceCount, die.sides, enemy.dmgBonus || 0, (dmgResult) => {
+        pushNarrative(`${enemy.name}이(가) 반격해 ${dmgResult.total}의 피해를 입힌다!`);
+        const newHp = Math.max(0, character.hp - dmgResult.total);
+        updateChar((c) => { c.hp = newHp; });
+        if (newHp <= 0) {
+          handleDefeat(enemy);
+        }
+      });
     });
   };
 
   const finishCombatWin = (enemy) => {
+    setCombat(null);
     pushSystem(`🏆 ${enemy.name}을(를) 쓰러뜨렸다! 경험치 +${enemy.xp}`);
     updateChar((c) => { c.xp += enemy.xp; });
     enemy.loot.forEach((l) => { if (Math.random() < l.chance) { pushSystem(`획득: ${l.name}`); gainItem(l.name, l.id, 1); } });
@@ -638,22 +823,37 @@ function App() {
     advanceNode();
   };
 
+  const handleDefeat = (enemy) => {
+    setCombat(null);
+    pushSystem(`💀 ${enemy.name}에게 쓰러졌다...`);
+    pushNarrative("눈앞이 아득해지는 순간, 지나가던 순찰대가 당신을 발견해 안전한 곳으로 옮긴다. 상처는 깊었지만, 목숨은 건졌다.");
+    updateChar((c) => { c.hp = Math.max(1, Math.floor(c.maxHp * 0.4)); });
+  };
+
   const combatFlee = () => {
     if (!combat) return;
-    const roll = performCheck(statMod(character.stats.dex), 10 + Math.floor(combat.enemy.dex/2), "도주 판정");
-    pushDice(roll);
-    if (roll.success) { pushNarrative("재빠르게 몸을 빼내 거리를 벌린다."); setCombat(null); }
-    else { pushNarrative("도망치지 못했다!"); setTimeout(() => enemyTurn(0), 300); }
+    const dc = 10 + Math.floor(combat.enemy.dex / 2);
+    queueRoll("도주 판정", statMod(character.stats.dex) + getTraitBonus(character, "flee"), dc, (roll) => {
+      if (roll.success) { pushNarrative("재빠르게 몸을 빼내 거리를 벌린다."); setCombat(null); }
+      else { pushNarrative("도망치지 못했다!"); queueEnemyTurn(); }
+    });
+  };
+
+  const combatIntimidate = () => {
+    if (!combat) return;
+    const dc = 10 + Math.floor(combat.enemy.str / 2);
+    queueRoll("위협 판정 (매력)", statMod(character.stats.cha), dc, (roll) => {
+      if (roll.success) {
+        pushNarrative(`${combat.enemy.name}이(가) 기세에 눌려 움찔한다. 다음 공격이 조금 더 정확해질 것 같다.`);
+        setCombat((cb) => cb ? ({ ...cb, enemyFlustered: true }) : cb);
+      } else {
+        pushNarrative(`${combat.enemy.name}은(는) 눈 하나 깜짝하지 않는다.`);
+      }
+      queueEnemyTurn();
+    });
   };
 
   /* ---------- Job unlock ---------- */
-
-  const unlockJob = (jobKey) => {
-    updateChar((c) => { c.job = jobKey; c.unlockedSkillTier = 1; });
-    pushSystem(`${JOBS[jobKey].name}의 길을 걷기로 결심했다. 1티어 스킬 「${JOBS[jobKey].skills[0].name}」을(를) 익혔다.`);
-    setJobPick(false);
-    advanceNode();
-  };
 
   /* ---------- Free text ---------- */
 
@@ -662,11 +862,34 @@ function App() {
     if (!t) return;
     pushLog({ type: "player", text: t });
     setInput("");
+    if (combat) {
+      handleCombatFreeText(t);
+      return;
+    }
     if (/공격|싸우|전투/.test(t)) startCombat();
     else if (/숨|은신|잠입/.test(t)) doStealthCheck();
     else if (/설득|대화|말/.test(t)) doPersuade();
     else if (/조사|살펴|확인/.test(t)) doTrapCheck();
     else pushNarrative("주변을 둘러보지만 특별한 반응은 없다. 다른 행동을 시도해볼 수 있을 것 같다.");
+  };
+
+  const handleCombatFreeText = (t) => {
+    if (!combat) return;
+    const job = JOBS[character.job];
+    const matchedSkill = job.skills.find((s) => s.tier <= character.unlockedSkillTier && t.includes(s.name));
+    if (matchedSkill) {
+      if (character.mp < matchedSkill.mp) { pushNarrative(`「${matchedSkill.name}」을(를) 쓰려 하지만 마나가 부족하다.`); return; }
+      combatAttack(matchedSkill);
+    } else if (/도망|도주|피하|물러나/.test(t)) {
+      combatFlee();
+    } else if (/위협|도발|협박|소리치|노려본다/.test(t)) {
+      combatIntimidate();
+    } else if (/공격|치다|벤다|찌른다|후려|때린다|찌르|베어/.test(t)) {
+      combatAttack(null);
+    } else {
+      pushNarrative(`"${t}" — 목소리는 전투의 소음 속에 묻히지만, 그 기세만큼은 또렷이 전해진다.`);
+      queueEnemyTurn();
+    }
   };
 
   const onSuggestion = (action) => {
@@ -676,12 +899,11 @@ function App() {
     else if (action === "persuade") doPersuade();
     else if (action === "combat") startCombat();
     else if (action === "advance") advanceNode();
-    else if (action === "unlockjob") setJobPick(true);
   };
 
   const resetGame = () => {
     setScreen("creation"); setCharacter(null); setLog([]); setCombat(null);
-    setNodeIdx(0); setPanel(null); setResetConfirm(false); setJobPick(false);
+    setNodeIdx(0); setPanel(null); setResetConfirm(false);
   };
 
   if (screen === "creation") {
@@ -700,8 +922,8 @@ function App() {
       </div>
 
       <div className="log-scroll">
-        {log.map((entry) => <LogEntry key={entry.id} entry={entry} />)}
-        {log.length > 0 && log[log.length-1].type === "choice" && (
+        {log.map((entry) => <LogEntry key={entry.id} entry={entry} onResolvePending={resolvePendingRoll} />)}
+        {!hasPendingRoll && hasActiveChoice && (
           <div className="suggestion-row">
             {log[log.length-1].options.map((o) => (
               <button key={o.label} className="suggestion-btn" onClick={() => onSuggestion(o.action)}>{o.label}</button>
@@ -712,21 +934,10 @@ function App() {
       </div>
 
       {combat && (
-        <CombatPanel combat={combat} character={character} onAttack={combatAttack} onFlee={combatFlee} />
+        <CombatPanel combat={combat} character={character} onAttack={combatAttack} onFlee={combatFlee} onIntimidate={combatIntimidate} locked={hasPendingRoll} />
       )}
 
-      {!combat && jobPick && (
-        <div className="job-pick">
-          <div className="job-pick__title">직업의 길을 선택하세요</div>
-          <div className="choice-grid">
-            {Object.entries(JOBS).map(([key, job]) => (
-              <button key={key} className="choice-btn" onClick={() => unlockJob(key)}>{job.name}</button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!combat && !jobPick && node && (
+      {!combat && !hasPendingRoll && !hasActiveChoice && node && (
         <div className="suggestion-row suggestion-row--floating">
           {node.suggestions.map((s) => (
             <button key={s.label} className="suggestion-btn" onClick={() => onSuggestion(s.action)}>{s.label}</button>
@@ -734,9 +945,9 @@ function App() {
         </div>
       )}
 
-      {!combat && (
+      {!hasPendingRoll && !hasActiveChoice && (
         <div className="input-row">
-          <input className="text-input" placeholder="행동을 입력하세요..." value={input}
+          <input className="text-input" placeholder={combat ? "말이나 행동을 입력하세요... (예: 위협한다, 강타를 사용한다)" : "행동을 입력하세요..."} value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleFreeText()} />
           <button className="send-btn" onClick={handleFreeText}><MessageCircle size={16}/></button>
@@ -778,9 +989,9 @@ function App() {
 
 /* ============================== COMBAT PANEL ============================== */
 
-function CombatPanel({ combat, character, onAttack, onFlee }) {
-  const job = character.job ? JOBS[character.job] : null;
-  const availableSkills = job ? job.skills.filter((s) => s.tier <= character.unlockedSkillTier && s.mp <= character.mp) : [];
+function CombatPanel({ combat, character, onAttack, onFlee, onIntimidate, locked }) {
+  const job = JOBS[character.job];
+  const availableSkills = job.skills.filter((s) => s.tier <= character.unlockedSkillTier && s.mp <= character.mp);
   return (
     <div className="combat-panel">
       <div className="combat-panel__enemy">
@@ -788,13 +999,14 @@ function CombatPanel({ combat, character, onAttack, onFlee }) {
         <Bar value={combat.enemy.curHp} max={combat.enemy.hp} colorClass="bar-fill bar-fill--enemy" label="적 HP" />
       </div>
       <div className="combat-panel__actions">
-        <button className="combat-btn combat-btn--atk" onClick={() => onAttack(null)}><Sword size={16}/> 공격</button>
+        <button className="combat-btn combat-btn--atk" disabled={locked} onClick={() => onAttack(null)}><Sword size={16}/> 공격</button>
         {availableSkills.map((s) => (
-          <button key={s.name} className="combat-btn combat-btn--skill" onClick={() => onAttack(s)}>
+          <button key={s.name} className="combat-btn combat-btn--skill" disabled={locked} onClick={() => onAttack(s)}>
             <Wand2 size={14}/> {s.name} <span className="mp-cost">MP{s.mp}</span>
           </button>
         ))}
-        <button className="combat-btn combat-btn--flee" onClick={onFlee}><Footprints size={16}/> 도망</button>
+        <button className="combat-btn combat-btn--taunt" disabled={locked} onClick={onIntimidate}><MessageCircle size={14}/> 위협</button>
+        <button className="combat-btn combat-btn--flee" disabled={locked} onClick={onFlee}><Footprints size={16}/> 도망</button>
       </div>
     </div>
   );
@@ -815,12 +1027,14 @@ function Modal({ children, onClose }) {
 
 function StatusPanel({ character, updateChar }) {
   const allocate = (key) => updateChar((c) => { if (c.statPoints > 0) { c.stats[key] += 1; c.statPoints -= 1; } });
+  const job = JOBS[character.job];
+  const unlockedSkills = job.skills.filter((s) => s.tier <= character.unlockedSkillTier);
   return (
     <div className="panel">
       <div className="panel__title">상태</div>
       <div className="status-summary">
         <div>{character.name} · {character.race} · Lv.{character.level}</div>
-        <div className="status-summary__muted">직업: {character.job ? JOBS[character.job].name : "미정"}</div>
+        <div className="status-summary__muted">직업: {job.name}</div>
         <div className="status-summary__muted">경험치 {character.xp} / {xpForLevel(character.level)}</div>
         {character.statPoints > 0 && <div className="status-summary__points">분배 가능 포인트: {character.statPoints}</div>}
       </div>
@@ -837,6 +1051,26 @@ function StatusPanel({ character, updateChar }) {
         <div className="appearance-row">{HEIGHT_TABLE[character.appearance.height]}</div>
         <div className="appearance-row">{BUILD_TABLE[character.appearance.build]}</div>
         <div className="appearance-row">{FEATURE_TABLE[character.appearance.feature]}</div>
+      </div>
+      {character.traits && character.traits.length > 0 && (
+        <div className="traits-list">
+          <div className="panel__subtitle">종족 · 배경 특성</div>
+          {character.traits.map((t) => (
+            <div key={t.name} className="trait-card">
+              <div className="trait-card__name">{t.name}</div>
+              <div className="trait-card__desc">{t.desc}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="traits-list">
+        <div className="panel__subtitle">직업 스킬 ({job.name})</div>
+        {unlockedSkills.map((s) => (
+          <div key={s.name} className="trait-card trait-card--job">
+            <div className="trait-card__name">{s.name} <span className="trait-card__tier">Tier {s.tier}</span></div>
+            <div className="trait-card__desc">{s.desc}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -988,6 +1222,13 @@ function GlobalStyle() {
       .dice-card--fail { border-left-color:#6b5a3a; opacity:.85; }
       .dice-card--crit-success { border-left-color:var(--gold); box-shadow:0 0 10px rgba(201,150,63,.35); }
       .dice-card--crit-fail { border-left-color:var(--danger); }
+      .dice-card--pending { border-left-color:var(--gold); border-style:dashed; }
+      .dice-card--pending-damage { border-left-color:var(--ember); }
+      .dice-card--damage { border-left-color:var(--ember); }
+      .dice-card__outcome--dmg { color:var(--ember); font-size:16px; }
+      .dice-card__icon--pulse { animation: dice-pulse 1.2s ease-in-out infinite; }
+      @keyframes dice-pulse { 0%,100% { opacity:.5; transform:scale(1); } 50% { opacity:1; transform:scale(1.15); } }
+      .roll-btn { min-height:40px; background:var(--gold); color:#171009; border:none; border-radius:8px; padding:0 16px; font-weight:bold; font-size:13px; flex-shrink:0; }
       .dice-card__icon { color:var(--gold); flex-shrink:0; }
       .dice-card__body { flex:1; }
       .dice-card__label { font-size:11px; color:var(--parchment-dim); }
@@ -1012,6 +1253,8 @@ function GlobalStyle() {
       .combat-btn--atk { background:var(--ember); color:#fff; }
       .combat-btn--skill { background:#2a4a5c; color:#dff0f5; }
       .combat-btn--flee { background:transparent; border:1px solid #4a3a1c; color:var(--parchment-dim); }
+      .combat-btn--taunt { background:#3a2c10; border:1px solid var(--gold); color:var(--gold); }
+      .combat-btn:disabled { opacity:.4; }
       .mp-cost { font-size:10px; opacity:.8; margin-left:2px; }
 
       .job-pick { padding:14px 16px; background:#241608; border-top:1px solid #4a3a1c; }
@@ -1025,6 +1268,13 @@ function GlobalStyle() {
       .modal-sheet { width:100%; max-width:480px; margin:0 auto; background:var(--panel); border-radius:16px 16px 0 0; padding:20px 18px 28px; max-height:80vh; overflow-y:auto; position:relative; border-top:1px solid #4a3a1c; }
       .modal-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--parchment-dim); }
       .panel__title { font-size:16px; color:var(--gold); margin-bottom:12px; }
+      .panel__subtitle { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--parchment-dim); margin:12px 0 6px; }
+      .traits-list { display:flex; flex-direction:column; gap:6px; }
+      .trait-card { background:#2a1f10; border:1px solid #4a3a1c; border-left:3px solid var(--gold); border-radius:6px; padding:8px 10px; }
+      .trait-card__name { font-size:13px; color:var(--gold); }
+      .trait-card__desc { font-size:11.5px; color:var(--parchment-dim); margin-top:2px; }
+      .trait-card--job { border-left-color:var(--ember); }
+      .trait-card__tier { font-size:10px; color:var(--parchment-dim); font-weight:normal; }
       .status-summary { font-size:13px; color:var(--parchment); margin-bottom:10px; display:flex; flex-direction:column; gap:3px; }
       .status-summary__muted { color:var(--parchment-dim); font-size:12px; }
       .status-summary__points { color:var(--gold); font-size:12px; }
