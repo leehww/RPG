@@ -52,8 +52,12 @@ const RACES = {
   2: { name: "엘프", desc: "숲과 달빛 아래서 나고 자란 종족", mods: { str: -1, dex: 2, con: -1, int: 1, wis: 1 } },
   3: { name: "드워프", desc: "돌과 쇠를 벗삼아 살아가는 이들", mods: { str: 1, dex: -1, con: 2, cha: -1 } },
   4: { name: "오크", desc: "거친 황야에서 살아남은 강인한 종족", mods: { str: 2, con: 1, int: -2, wis: -1, cha: -1 } },
-  5: { name: "수인", desc: "짐승의 감각을 물려받은 이들", mods: { str: 1, dex: 1, int: -1, cha: 1 } },
+  5: { name: "수인", desc: "짐승의 감각을 물려받은 이들", mods: { str: 1, dex: 1, int: -1, cha: 1 }, needsSubtype: true, subtypeLabel: "어떤 동물의 수인인가요?", subtypePlaceholder: "예: 고양이, 호랑이, 늑대, 여우, 곰, 뱀..." },
   6: { name: "하플링", desc: "작지만 재빠르고 다정한 종족", mods: { str: -2, dex: 2, con: -1, wis: 1, cha: 1 } },
+  7: { name: "스톤본", desc: "고대 아스텔의 마법으로 생명을 얻은 석상 종족", mods: { str: 1, con: 3, dex: -2, cha: -2 } },
+  8: { name: "재의 정령", desc: "재의 폐허지대 깊은 곳에서 태어난 반영혼체 존재", mods: { dex: 1, con: -1, wis: 2, cha: -2 } },
+  9: { name: "나가", desc: "살린 항 인근 해안에 서식하는 반인반사 종족", mods: { str: -2, con: -1, dex: 2, wis: 1 } },
+  10: { name: "거인혈족", desc: "먼 옛날 거인의 피가 섞인 우직한 종족", mods: { str: 3, dex: -2, int: -1, cha: -1 } },
 };
 
 const BG_QUESTIONS = [
@@ -82,6 +86,10 @@ const RACE_TRAITS = {
   4: { name: "전장의 기백", desc: "싸움에서 쉽게 물러서지 않는 압도적인 기세", checkType: "combat", bonus: 2 },
   5: { name: "날렵한 야성", desc: "위험을 감지하면 그 누구보다 빠르게 몸을 뺀다", checkType: "flee", bonus: 2 },
   6: { name: "행운아", desc: "타고난 붙임성으로 상대의 마음을 쉽게 얻는다", checkType: "persuade", bonus: 2 },
+  7: { name: "태고의 감각", desc: "돌에 새겨진 고대의 마법이 위험을 미리 알린다", checkType: "trap", bonus: 2 },
+  8: { name: "섬뜩한 존재감", desc: "반쯤 영혼인 몸에서 뿜어져 나오는 기묘한 위압감", checkType: "combat", bonus: 2 },
+  9: { name: "그림자 사냥꾼", desc: "물가의 그림자 속에서 소리 없이 사냥감에 다가간다", checkType: "stealth", bonus: 2 },
+  10: { name: "위압적인 존재감", desc: "그 존재만으로도 상대를 위축시킨다", checkType: "intimidate", bonus: 2 },
 };
 
 // 과거 배경(직업 이력)에 따라 붙는 특성(스킬) — 커스텀 입력 시에는 부여되지 않음
@@ -126,9 +134,40 @@ const JOBS = {
     { tier:4, name:"연쇄 자상", mp:12, diceBonus:5, desc:"보이지 않는 속도로 난자한다 (+5d6)" },
     { tier:5, name:"천참격", mp:18, diceBonus:6, desc:"급소만을 노리는 필살의 연격 (+6d6)" },
   ]},
+  paladin: { name: "성기사", atkStat: "str", weaponDie: "1d8", skills: [
+    { tier:1, name:"심판의 일격", mp:3, diceBonus:1, desc:"신성한 힘을 담아 벤다 (+1d6)" },
+    { tier:2, name:"수호의 맹세", mp:5, diceBonus:2, desc:"굳게 막아서며 반격한다 (+2d6)" },
+    { tier:3, name:"정화의 빛", mp:8, diceBonus:3, desc:"빛으로 적을 불사른다 (+3d6)" },
+    { tier:4, name:"불굴의 의지", mp:12, diceBonus:4, desc:"쓰러지지 않는 의지로 몰아친다 (+4d6)" },
+    { tier:5, name:"심판의 날", mp:18, diceBonus:6, desc:"신의 심판을 내리는 필살기 (+6d6)" },
+  ]},
+  priest: { name: "사제", atkStat: "wis", weaponDie: "1d6", skills: [
+    { tier:1, name:"성스러운 타격", mp:4, diceBonus:2, desc:"신성한 힘으로 가격한다 (+2d6)" },
+    { tier:2, name:"축복의 일격", mp:6, diceBonus:3, desc:"축복 받은 힘으로 벤다 (+3d6)" },
+    { tier:3, name:"심판의 기도", mp:9, diceBonus:4, desc:"기도의 힘이 적을 짓누른다 (+4d6)" },
+    { tier:4, name:"천벌", mp:13, diceBonus:5, desc:"하늘의 벌이 내려친다 (+5d6)" },
+    { tier:5, name:"성역의 심판", mp:20, diceBonus:7, desc:"성역의 힘을 담은 최후의 일격 (+7d6)" },
+  ]},
+  bard: { name: "음유시인", atkStat: "cha", weaponDie: "1d6", skills: [
+    { tier:1, name:"도발의 노래", mp:3, diceBonus:1, desc:"혼란스러운 선율로 허점을 만든다 (+1d6)" },
+    { tier:2, name:"용기의 선율", mp:5, diceBonus:2, desc:"사기를 북돋아 강하게 내려친다 (+2d6)" },
+    { tier:3, name:"절망의 코드", mp:8, diceBonus:3, desc:"절망적인 화음으로 정신을 뒤흔든다 (+3d6)" },
+    { tier:4, name:"광란의 협주곡", mp:12, diceBonus:4, desc:"몰아치는 연주처럼 연격한다 (+4d6)" },
+    { tier:5, name:"종막의 노래", mp:18, diceBonus:6, desc:"모든 것을 끝내는 마지막 악장 (+6d6)" },
+  ]},
+  elementalist: { name: "정령술사", atkStat: "int", weaponDie: "1d6", skills: [
+    { tier:1, name:"대지의 일격", mp:4, diceBonus:2, desc:"대지의 정령이 힘을 보탠다 (+2d6)" },
+    { tier:2, name:"바람의 칼날", mp:6, diceBonus:3, desc:"바람의 칼날이 베어낸다 (+3d6)" },
+    { tier:3, name:"불꽃 폭발", mp:9, diceBonus:4, desc:"정령의 불길이 폭발한다 (+4d6)" },
+    { tier:4, name:"폭풍 소환", mp:13, diceBonus:5, desc:"정령들이 폭풍을 일으킨다 (+5d6)" },
+    { tier:5, name:"대정령의 심판", mp:20, diceBonus:7, desc:"대정령의 힘을 빌린 궁극기 (+7d6)" },
+  ]},
 };
 
-const JOB_KEYS_BY_ROLL = { 1: "warrior", 2: "archer", 3: "mage", 4: "rogue" };
+const JOB_KEYS_BY_ROLL = {
+  1: "warrior", 2: "archer", 3: "mage", 4: "rogue",
+  5: "paladin", 6: "priest", 7: "bard", 8: "elementalist",
+};
 
 const MONSTERS = [
   { id:"m1", name:"녹슨 늑대", tier:1, hp:18, dex:8, str:6, dmgDie:"1d4", dmgBonus:1, xp:20, discovered:true, desc:"재의 폐허지대를 떠도는 굶주린 늑대", loot:[{id:"i_fang",name:"늑대 이빨",chance:0.5},{id:"i_gold",name:"소량의 금화",chance:0.6}] },
@@ -138,6 +177,10 @@ const MONSTERS = [
   { id:"m5", name:"살린 항의 밀수꾼", tier:2, hp:28, dex:13, str:8, dmgDie:"1d6", dmgBonus:1, xp:40, discovered:false, desc:"항구에서 암약하는 무장 밀수꾼", loot:[{id:"i_gold",name:"소량의 금화",chance:0.8}] },
   { id:"m6", name:"아르덴의 배신 기사", tier:3, hp:52, dex:11, str:13, dmgDie:"1d8", dmgBonus:2, xp:75, discovered:false, desc:"왕국을 등진 타락한 기사", loot:[{id:"i_sword",name:"낡은 장검",chance:0.3}] },
 ];
+
+const ITEM_EFFECTS = {
+  i_potion: { type: "heal", amount: 15, flavor: "몸에 온기가 돌며 상처가 아무는 것이 느껴진다." },
+};
 
 /* ============================== HELPERS ============================== */
 
@@ -150,13 +193,12 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const xpForLevel = (lvl) => lvl * 100;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-function performCheck(mod, dc, label) {
+function performCheck(target, label) {
   const nat = rollD(20);
-  const total = nat + mod;
-  const critSuccess = nat === 20;
-  const critFail = nat === 1;
-  const success = critSuccess || (!critFail && total >= dc);
-  return { nat, mod, total, dc, success, critSuccess, critFail, label };
+  const critSuccess = nat === 1;
+  const critFail = nat === 20;
+  const success = critSuccess || (!critFail && nat <= target);
+  return { nat, target, success, critSuccess, critFail, label };
 }
 
 /* ============================== SMALL UI ============================== */
@@ -176,6 +218,17 @@ function Bar({ value, max, colorClass, label }) {
 }
 
 function DiceCard({ roll }) {
+  if (roll.simple) {
+    return (
+      <div className="dice-card dice-card--success">
+        <div className="dice-card__icon"><Dices size={18} /></div>
+        <div className="dice-card__body">
+          <div className="dice-card__label">{roll.label}</div>
+          <div className="dice-card__math">🎲 <b>{roll.nat}</b></div>
+        </div>
+      </div>
+    );
+  }
   const outcomeText = roll.critSuccess ? "대성공" : roll.critFail ? "대실패" : roll.success ? "성공" : "실패";
   const tone = roll.critSuccess ? "crit-success" : roll.critFail ? "crit-fail" : roll.success ? "success" : "fail";
   return (
@@ -184,7 +237,7 @@ function DiceCard({ roll }) {
       <div className="dice-card__body">
         <div className="dice-card__label">{roll.label}</div>
         <div className="dice-card__math">
-          🎲 {roll.nat} {roll.mod >= 0 ? "+" : "-"} {Math.abs(roll.mod)} = <b>{roll.total}</b> vs DC {roll.dc}
+          🎲 <b>{roll.nat}</b> — {roll.statLabel ? `${roll.statLabel} ` : ""}{roll.target} 이하면 성공
         </div>
       </div>
       <div className="dice-card__outcome">{outcomeText}</div>
@@ -215,7 +268,7 @@ function PendingRollCard({ entry, onRoll }) {
       <div className="dice-card__body">
         <div className="dice-card__label">{entry.label}</div>
         <div className="dice-card__math">
-          {isDamage ? `${entry.diceCount}d${entry.diceSides}${entry.bonus ? ` + ${entry.bonus}` : ""}` : `DC ${entry.dc} · 보정 ${entry.mod >= 0 ? "+" : ""}${entry.mod}`}
+          {isDamage ? `${entry.diceCount}d${entry.diceSides}${entry.bonus ? ` + ${entry.bonus}` : ""}` : `${entry.statLabel ? entry.statLabel + " " : ""}${entry.target} 이하면 성공`}
         </div>
       </div>
       <button className="roll-btn" onClick={onRoll}>굴리기</button>
@@ -247,12 +300,12 @@ function CreationFlow({ onComplete }) {
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const rollRace = () => {
-    const r = rollD(6);
+    const r = rollD(10);
     setDraft((d) => ({ ...d, raceRoll: r, bonusChoice: null }));
   };
 
   const rollJob = () => {
-    const r = rollD(4);
+    const r = rollD(8);
     setDraft((d) => ({ ...d, jobRoll: r }));
   };
 
@@ -282,7 +335,7 @@ function CreationFlow({ onComplete }) {
     if (cur === "name") return draft.name.trim().length > 0;
     if (cur === "age") return String(draft.age).trim().length > 0 && !isNaN(Number(draft.age));
     if (cur === "gender") return !!draft.gender;
-    if (cur === "race") return draft.raceRoll && (!RACES[draft.raceRoll].choiceBonus || draft.bonusChoice);
+    if (cur === "race") return draft.raceRoll && (!RACES[draft.raceRoll].choiceBonus || draft.bonusChoice) && (!RACES[draft.raceRoll].needsSubtype || (draft.raceSubtype || "").trim());
     if (cur === "job") return !!draft.jobRoll;
     if (cur === "background") return BG_QUESTIONS.every((q) => draft.bg[q.key] && draft.bg[q.key].trim());
     if (cur === "stats") return !!draft.stats;
@@ -320,12 +373,12 @@ function CreationFlow({ onComplete }) {
       )}
 
       {cur === "race" && (
-        <StepCard title="운명의 굴림 — 종족 (d6)">
+        <StepCard title="운명의 굴림 — 종족 (d10)">
           {!draft.raceRoll ? (
-            <button className="primary-btn" onClick={rollRace}><Dices size={16}/> d6 굴리기</button>
+            <button className="primary-btn" onClick={rollRace}><Dices size={16}/> d10 굴리기</button>
           ) : (
             <>
-              <DiceCard roll={{ nat: draft.raceRoll, mod: 0, total: draft.raceRoll, dc: 0, success: true, label: "종족 굴림" }} />
+              <DiceCard roll={{ nat: draft.raceRoll, simple: true, label: "종족 굴림" }} />
               <div className="race-result">
                 <div className="race-result__name">{RACES[draft.raceRoll].name}</div>
                 <div className="race-result__desc">{RACES[draft.raceRoll].desc}</div>
@@ -344,6 +397,14 @@ function CreationFlow({ onComplete }) {
                     ))}
                   </div>
                 )}
+                {RACES[draft.raceRoll].needsSubtype && (
+                  <div className="subtype-input">
+                    <div className="subtype-input__label">{RACES[draft.raceRoll].subtypeLabel}</div>
+                    <input className="text-input" placeholder={RACES[draft.raceRoll].subtypePlaceholder}
+                      value={draft.raceSubtype || ""}
+                      onChange={(e) => setDraft({ ...draft, raceSubtype: e.target.value })} />
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -351,12 +412,12 @@ function CreationFlow({ onComplete }) {
       )}
 
       {cur === "job" && (
-        <StepCard title="운명의 굴림 — 직업 (d4)">
+        <StepCard title="운명의 굴림 — 직업 (d8)">
           {!draft.jobRoll ? (
-            <button className="primary-btn" onClick={rollJob}><Dices size={16}/> d4 굴리기</button>
+            <button className="primary-btn" onClick={rollJob}><Dices size={16}/> d8 굴리기</button>
           ) : (
             <>
-              <DiceCard roll={{ nat: draft.jobRoll, mod: 0, total: draft.jobRoll, dc: 0, success: true, label: "직업 굴림" }} />
+              <DiceCard roll={{ nat: draft.jobRoll, simple: true, label: "직업 굴림" }} />
               <div className="race-result">
                 <div className="race-result__name">{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].name}</div>
                 <div className="race-result__desc">첫 스킬 「{JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].skills[0].name}」을(를) 익힌 채로 여정을 시작한다</div>
@@ -424,7 +485,7 @@ function CreationFlow({ onComplete }) {
       {cur === "summary" && (
         <StepCard title="모험을 시작하기 전에">
           <div className="summary-card">
-            <div className="summary-line"><b>{draft.name}</b> · {draft.age}세 · {draft.gender} · {RACES[draft.raceRoll].name} · {JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].name}</div>
+            <div className="summary-line"><b>{draft.name}</b> · {draft.age}세 · {draft.gender} · {RACES[draft.raceRoll].name}{draft.raceSubtype && draft.raceSubtype.trim() ? ` (${draft.raceSubtype.trim()})` : ""} · {JOBS[JOB_KEYS_BY_ROLL[draft.jobRoll]].name}</div>
             <div className="summary-line summary-line--muted">{draft.bg.motive} · {draft.bg.past} · {draft.bg.values}</div>
             <div className="stat-grid stat-grid--summary">
               {STAT_KEYS.map((k) => (
@@ -483,7 +544,7 @@ function buildCharacter(draft) {
   const traits = [raceTrait, pastTrait].filter(Boolean);
   return {
     name: draft.name, age: draft.age, gender: draft.gender,
-    race: RACES[draft.raceRoll].name,
+    race: RACES[draft.raceRoll].name + (draft.raceSubtype && draft.raceSubtype.trim() ? ` (${draft.raceSubtype.trim()})` : ""),
     background: draft.bg,
     stats: draft.stats,
     appearance: draft.appearance,
@@ -519,10 +580,23 @@ const getTraitBonus = (character, checkType) => {
 const MAX_HIDDEN_SKILLS = 2;
 const HIDDEN_SKILL_CHANCE = 0.25;
 
+const MOTIVE_INTROS = {
+  "잃어버린 가족을 찾기 위해": (c) => `가족의 마지막 흔적을 좇아 여기까지 흘러온 ${c.name}은(는), 그 실마리가 재의 폐허지대 어딘가에 있다는 소문을 들었다.`,
+  "복수를 위해": (c) => `잊을 수 없는 그날의 원한을 품은 ${c.name}은(는), 복수의 실마리를 찾아 재의 폐허지대로 향하는 중이다.`,
+  "이름을 남기기 위해": (c) => `아무도 기억하지 못할 삶을 거부한 ${c.name}은(는), 전설이 잠들어 있다는 재의 폐허지대에서 자신의 이름을 새기기로 결심했다.`,
+  "그저 고향이 싫어서": (c) => `숨 막히는 고향을 등지고 무작정 떠나온 ${c.name}은(는), 발길 닿는 대로 재의 폐허지대 어귀까지 흘러왔다.`,
+};
+
+const startNodeText = (c) => {
+  const introFn = MOTIVE_INTROS[c.background && c.background.motive];
+  const intro = introFn ? introFn(c) : `알 수 없는 이끌림에 붙들린 ${c.name}은(는) 재의 폐허지대로 향하는 길 위에 섰다.`;
+  return `${intro} 살린 항의 짠내 나는 안개 속, 낡은 이정표가 바람에 삐걱거리고 저 멀리 아르덴성의 첨탑이 흐릿하게 보인다.`;
+};
+
 const STORY_NODES = [
   {
     id: "start",
-    text: (c) => `살린 항의 짠내 나는 안개 속에서, ${c.name}은(는) 재의 폐허지대로 향하는 좁은 길 앞에 선다. 낡은 이정표가 바람에 삐걱거리고, 저 멀리 아르덴성의 첨탑이 흐릿하게 보인다.`,
+    text: startNodeText,
     suggestions: [
       { label: "🔎 주변을 살펴본다", action: "trap" },
       { label: "🤫 조용히 폐허 안쪽으로 접근한다", action: "stealth" },
@@ -576,8 +650,8 @@ function App() {
   const hasPendingRoll = log.some((e) => e.type === "pending");
   const hasActiveChoice = log.length > 0 && log[log.length - 1].type === "choice";
 
-  const queueRoll = (label, mod, dc, onResult) => {
-    const id = pushLog({ type: "pending", kind: "check", label, mod, dc });
+  const queueRoll = (label, statLabel, target, onResult) => {
+    const id = pushLog({ type: "pending", kind: "check", label, statLabel, target });
     pendingResolvers.current[id] = onResult;
   };
 
@@ -599,8 +673,8 @@ function App() {
       if (cb) cb(result);
       return;
     }
-    const roll = performCheck(entry.mod, entry.dc, entry.label);
-    setLog((l) => l.map((e) => (e.id === id ? { id, type: "dice", roll } : e)));
+    const roll = performCheck(entry.target, entry.label);
+    setLog((l) => l.map((e) => (e.id === id ? { id, type: "dice", roll: { ...roll, statLabel: entry.statLabel } } : e)));
     if (cb) cb(roll);
   };
 
@@ -622,6 +696,20 @@ function App() {
     });
   };
 
+  const useItem = (item) => {
+    const effect = ITEM_EFFECTS[item.id];
+    if (!effect) { pushSystem(`${item.name}은(는) 지금 사용할 수 없다.`); return; }
+    if (effect.type === "heal") {
+      updateChar((c) => {
+        c.hp = Math.min(c.maxHp, c.hp + effect.amount);
+        c.inventory = c.inventory
+          .map((i) => (i.id === item.id ? { ...i, qty: i.qty - 1 } : i))
+          .filter((i) => i.qty > 0);
+      });
+      pushSystem(`${item.name}을(를) 사용했다. ${effect.flavor} (HP +${effect.amount})`);
+    }
+  };
+
   const handleLevelUpCheck = () => {
     updateChar((c) => {
       const need = xpForLevel(c.level);
@@ -636,9 +724,9 @@ function App() {
   /* ---------- Exploration checks ---------- */
 
   const doStealthCheck = () => {
-    const dc = character.alert >= 2 ? 16 : 12;
-    const mod = statMod(character.stats.dex) + getTraitBonus(character, "stealth");
-    queueRoll("은신 판정", mod, dc, (roll) => {
+    const penalty = character.alert >= 2 ? 4 : 0;
+    const target = character.stats.dex + getTraitBonus(character, "stealth") - penalty;
+    queueRoll("은신 판정", "민첩", target, (roll) => {
       if (roll.success) {
         pushNarrative("그림자 속으로 미끄러지듯 몸을 숨긴다. 아무도 눈치채지 못한 듯하다.");
         updateChar((c) => { c.alert = Math.max(0, c.alert - 1); });
@@ -658,9 +746,8 @@ function App() {
   };
 
   const doTrapCheck = () => {
-    const dc = 14;
-    const mod = statMod(character.stats.wis) + getTraitBonus(character, "trap");
-    queueRoll("함정 감지 (지혜)", mod, dc, (roll) => {
+    const target = character.stats.wis + getTraitBonus(character, "trap");
+    queueRoll("함정 감지", "지혜", target, (roll) => {
       if (roll.success) {
         pushNarrative("발밑에서 희미한 실선을 발견한다 — 누군가 설치한 견제용 장치다.");
         pushSystem("해제를 시도하거나, 우회할 수 있습니다.");
@@ -679,8 +766,8 @@ function App() {
   };
 
   const doDisarm = () => {
-    const mod = statMod(character.stats.dex) + getTraitBonus(character, "trap");
-    queueRoll("함정 해제 (민첩)", mod, 14, (roll) => {
+    const target = character.stats.dex + getTraitBonus(character, "trap");
+    queueRoll("함정 해제", "민첩", target, (roll) => {
       if (roll.success) { pushNarrative("섬세한 손놀림으로 장치를 무력화한다."); gainItem("녹슨 부품", "i_scrap", 1); }
       else { const dmg = rollD(4); updateChar((c)=>{c.hp=Math.max(0,c.hp-dmg);}); pushNarrative("장치가 오작동하며 튕겨 나온다."); pushSystem(`피해 ${dmg}.`); }
       advanceNode();
@@ -694,9 +781,8 @@ function App() {
       return;
     }
     const affinity = character.npcAffinity[npc] || 0;
-    const dc = clamp(16 - Math.floor(affinity / 20), 8, 20);
-    const mod = statMod(character.stats.cha) + getTraitBonus(character, "persuade");
-    queueRoll(`설득 판정 (호감도 ${affinity})`, mod, dc, (roll) => {
+    const target = character.stats.cha + getTraitBonus(character, "persuade") + Math.floor(affinity / 10);
+    queueRoll(`설득 판정 (호감도 ${affinity})`, "매력", target, (roll) => {
       updateChar((c) => {
         c.usedTopics = [...c.usedTopics, npc];
         c.npcAffinity[npc] = clamp(affinity + (roll.success ? 15 : -5), -100, 100);
@@ -752,13 +838,15 @@ function App() {
     if (!combat) return;
     const job = JOBS[character.job];
     const atkStat = job.atkStat;
+    const traitBonus = getTraitBonus(character, "combat");
     const flusterBonus = combat.enemyFlustered ? 2 : 0;
-    const mod = statMod(character.stats[atkStat]) + getTraitBonus(character, "combat") + flusterBonus;
-    const hitDC = 10 + Math.floor(combat.enemy.dex / 2);
+    const target = character.stats[atkStat] + traitBonus + flusterBonus + 2 - Math.floor(combat.enemy.dex / 4);
+    const dmgBonus = Math.max(0, statMod(character.stats[atkStat]) + traitBonus);
     const weaponDie = parseDie(job.weaponDie);
+    const statLabel = STAT_LABELS[atkStat];
     if (combat.enemyFlustered) setCombat((cb) => cb ? ({ ...cb, enemyFlustered: false }) : cb);
 
-    queueRoll(skill ? `${skill.name} 명중 판정` : "공격 명중 판정", mod, hitDC, (roll) => {
+    queueRoll(skill ? `${skill.name} 명중 판정` : "공격 명중 판정", statLabel, target, (roll) => {
       if (skill) updateChar((c) => { c.mp = Math.max(0, c.mp - skill.mp); });
 
       if (!roll.success) {
@@ -769,11 +857,11 @@ function App() {
 
       let diceCount = weaponDie.count + (skill ? skill.diceBonus : 0);
       if (roll.critSuccess) diceCount *= 2;
-      else if (roll.total - hitDC >= 5) diceCount += 1;
+      else if (target - roll.nat >= 5) diceCount += 1;
 
       queueDamageRoll(
         skill ? `${skill.name} 데미지` : "공격 데미지",
-        diceCount, weaponDie.sides, Math.max(0, mod),
+        diceCount, weaponDie.sides, dmgBonus,
         (dmgResult) => {
           const dmg = Math.max(1, dmgResult.total);
           const newHp = Math.max(0, combat.enemy.curHp - dmg);
@@ -793,11 +881,10 @@ function App() {
   const queueEnemyTurn = () => {
     if (!combat) return;
     const enemy = combat.enemy;
-    const enemyMod = Math.floor(enemy.str / 3);
-    const defDC = 10 + statMod(character.stats.dex) + 3;
+    const target = enemy.str + 2 - Math.floor(character.stats.dex / 4);
     const die = parseDie(enemy.dmgDie);
 
-    queueRoll(`${enemy.name}의 공격`, enemyMod, defDC, (roll) => {
+    queueRoll(`${enemy.name}의 공격`, "힘", target, (roll) => {
       if (!roll.success) {
         pushNarrative(`${enemy.name}의 공격이 빗나간다.`);
         return;
@@ -832,8 +919,8 @@ function App() {
 
   const combatFlee = () => {
     if (!combat) return;
-    const dc = 10 + Math.floor(combat.enemy.dex / 2);
-    queueRoll("도주 판정", statMod(character.stats.dex) + getTraitBonus(character, "flee"), dc, (roll) => {
+    const target = character.stats.dex + getTraitBonus(character, "flee") + 2 - Math.floor(combat.enemy.dex / 4);
+    queueRoll("도주 판정", "민첩", target, (roll) => {
       if (roll.success) { pushNarrative("재빠르게 몸을 빼내 거리를 벌린다."); setCombat(null); }
       else { pushNarrative("도망치지 못했다!"); queueEnemyTurn(); }
     });
@@ -841,8 +928,8 @@ function App() {
 
   const combatIntimidate = () => {
     if (!combat) return;
-    const dc = 10 + Math.floor(combat.enemy.str / 2);
-    queueRoll("위협 판정 (매력)", statMod(character.stats.cha), dc, (roll) => {
+    const target = character.stats.cha + getTraitBonus(character, "intimidate") + 2 - Math.floor(combat.enemy.str / 4);
+    queueRoll("위협 판정", "매력", target, (roll) => {
       if (roll.success) {
         pushNarrative(`${combat.enemy.name}이(가) 기세에 눌려 움찔한다. 다음 공격이 조금 더 정확해질 것 같다.`);
         setCombat((cb) => cb ? ({ ...cb, enemyFlustered: true }) : cb);
@@ -852,8 +939,6 @@ function App() {
       queueEnemyTurn();
     });
   };
-
-  /* ---------- Job unlock ---------- */
 
   /* ---------- Free text ---------- */
 
@@ -965,7 +1050,7 @@ function App() {
       {panel && (
         <Modal onClose={() => setPanel(null)}>
           {panel === "status" && <StatusPanel character={character} updateChar={updateChar} />}
-          {panel === "inventory" && <InventoryPanel character={character} updateChar={updateChar} />}
+          {panel === "inventory" && <InventoryPanel character={character} updateChar={updateChar} onUse={useItem} />}
           {panel === "quest" && <QuestPanel character={character} />}
           {panel === "bestiary" && <BestiaryPanel character={character} />}
         </Modal>
@@ -1076,7 +1161,7 @@ function StatusPanel({ character, updateChar }) {
   );
 }
 
-function InventoryPanel({ character, updateChar }) {
+function InventoryPanel({ character, updateChar, onUse }) {
   const [selected, setSelected] = useState(null);
   const discard = (id, qty) => updateChar((c) => {
     const item = c.inventory.find((i) => i.id === id);
@@ -1085,13 +1170,19 @@ function InventoryPanel({ character, updateChar }) {
     if (item.qty <= 0) c.inventory = c.inventory.filter((i) => i.id !== id);
     setSelected(null);
   });
+  const useSelected = () => {
+    if (!selected) return;
+    onUse(selected);
+    const remainingQty = selected.qty - 1;
+    setSelected(remainingQty > 0 ? { ...selected, qty: remainingQty } : null);
+  };
   const slots = [...character.inventory, ...Array(Math.max(0, 10 - character.inventory.length)).fill(null)];
   return (
     <div className="panel">
       <div className="panel__title">가방 ({character.inventory.length}/10)</div>
       <div className="inv-grid">
         {slots.map((item, idx) => (
-          <div key={idx} className={`inv-slot ${item ? "inv-slot--filled" : ""}`} onClick={() => item && setSelected(item)}>
+          <div key={idx} className={`inv-slot ${item ? "inv-slot--filled" : ""} ${item && ITEM_EFFECTS[item.id] ? "inv-slot--usable" : ""}`} onClick={() => item && setSelected(item)}>
             {item ? (<><span className="inv-slot__name">{item.name}</span><span className="inv-slot__qty">×{item.qty}</span></>) : <span className="inv-slot__empty">·</span>}
           </div>
         ))}
@@ -1100,6 +1191,7 @@ function InventoryPanel({ character, updateChar }) {
         <div className="inv-detail">
           <div className="inv-detail__name">{selected.name} ×{selected.qty}</div>
           <div className="inv-detail__actions">
+            {ITEM_EFFECTS[selected.id] && <button className="primary-btn inv-use-btn" onClick={useSelected}>사용</button>}
             <button className="secondary-btn" onClick={() => discard(selected.id, 1)}>1개 버리기</button>
             <button className="danger-btn" onClick={() => discard(selected.id, selected.qty)}>전부 버리기</button>
           </div>
@@ -1186,6 +1278,8 @@ function GlobalStyle() {
       .race-result__name { font-size:18px; color:var(--gold); }
       .race-result__desc { font-size:13px; color:var(--parchment-dim); margin:4px 0 8px; }
       .mod-chip { display:inline-block; background:var(--panel-2); border:1px solid #4a3a1c; border-radius:20px; padding:3px 10px; font-size:12px; margin:2px 4px 0 0; }
+      .subtype-input { margin-top:12px; }
+      .subtype-input__label { font-size:13px; color:var(--parchment-dim); margin-bottom:6px; }
       .bg-question { margin-bottom:16px; }
       .bg-question__text { font-size:14px; margin-bottom:6px; color:var(--parchment-dim); }
       .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
@@ -1282,12 +1376,15 @@ function GlobalStyle() {
       .inv-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
       .inv-slot { min-height:56px; background:var(--panel-2); border:1px solid #4a3a1c; border-radius:8px; padding:8px; display:flex; flex-direction:column; justify-content:center; }
       .inv-slot--filled { border-color:#5a4a24; }
+      .inv-slot--usable { position:relative; }
+      .inv-slot--usable::after { content:""; position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--teal); }
       .inv-slot__name { font-size:13px; }
       .inv-slot__qty { font-size:11px; color:var(--gold); }
       .inv-slot__empty { color:#4a3a1c; text-align:center; }
       .inv-detail { margin-top:14px; background:var(--panel-2); border-radius:8px; padding:12px; }
       .inv-detail__name { font-size:14px; margin-bottom:8px; }
       .inv-detail__actions { display:flex; gap:8px; }
+      .inv-use-btn { width:auto; margin-top:0; flex:1 1 auto; }
 
       .quest-card { background:var(--panel-2); border:1px solid #4a3a1c; border-radius:8px; padding:12px; margin-bottom:10px; }
       .quest-card__title { font-size:14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
